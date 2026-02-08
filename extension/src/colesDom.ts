@@ -103,26 +103,22 @@ const matchLinkByText = (links: HTMLAnchorElement[], text: string) => {
   );
 };
 
-const openCategory = async (categoryName: string) => {
+const gotoProductCategory = async (categoryName: string) => {
   await ensureOnBrowsePage();
-  await waitForSelector("a");
   const links = findNavCategories();
   const link = matchLinkByText(links, categoryName);
   if (!link) {
     throw new Error(`Category not found: ${categoryName}`);
   }
-  link.click();
-  await waitForCondition(() =>
-    normalizeText(document.title).includes(normalizeText(categoryName))
-  );
+  await navigateTo(link.href);
 };
 
 const openSubcategory = async (
   categoryName: string,
   subCategoryName: string
 ) => {
-  await openCategory(categoryName);
-  await waitForSelector("main");
+  await gotoProductCategory(categoryName);
+
   const main = document.querySelector("main") ?? document.body;
   const subLinks = Array.from(
     main.querySelectorAll<HTMLAnchorElement>(
@@ -481,22 +477,16 @@ const getCategories = async () => {
 };
 
 const listSubcategories = async (categoryName: string) => {
-  await openCategory(categoryName);
-  await waitForSelector("main");
-  const main = document.querySelector("main") ?? document.body;
+  await gotoProductCategory(categoryName);
+
+  const navList = document.querySelector('[data-testid="navigation-list"]');
+  if (!navList) {
+    throw new Error("Navigation list not found.");
+  }
   const links = Array.from(
-    main.querySelectorAll<HTMLAnchorElement>(
-      'a[href^="/browse"], a[href*="/browse/"]'
-    )
+    navList.querySelectorAll<HTMLAnchorElement>('[data-testid="nav-link"]')
   );
-  const subcategories = uniqueTexts(
-    links
-      .map((link) => link.textContent ?? "")
-      .map((text) => text.trim())
-      .filter(
-        (text) => text && normalizeText(text) !== normalizeText(categoryName)
-      )
-  );
+  const subcategories = links.map((link) => link.textContent);
   return { categoryName, subcategories };
 };
 
