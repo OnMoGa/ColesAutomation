@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Coles MCP Bridge",
+  "version": "0.1.0",
+  "description": "Bridge Coles web UI actions to a local MCP server.",
+  "permissions": ["storage", "tabs", "activeTab"],
+  "host_permissions": ["https://www.coles.com.au/*"],
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.coles.com.au/*"],
+      "js": ["dist/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "coles-mcp-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/background.ts src/content.ts --bundle --outdir=dist --format=esm --target=es2020 --sourcemap"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.262",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.3"
+  }
+}
