@@ -1,5 +1,5 @@
 export type CommandName =
-  | "get_categories"
+  | "list_categories"
   | "list_subcategories"
   | "list_subcategory_products"
   | "search_products"
@@ -11,7 +11,7 @@ export type CommandName =
   | "review_order";
 
 export type RequestParams = {
-  get_categories: Record<string, never>;
+  list_categories: Record<string, never>;
   list_subcategories: { categoryName: string };
   list_subcategory_products: {
     categoryName: string;
@@ -48,8 +48,8 @@ export type TrolleyItem = {
 
 export type CommandResult = {
   open_home: { url: string };
-  get_categories: { categories: string[] };
-  list_subcategories: { categoryName: string; subcategories: string[] };
+  list_categories: { categories: string[] };
+  list_subcategories: { subcategories: string[] };
   list_subcategory_products: {
     categoryName: string;
     subCategoryName: string;

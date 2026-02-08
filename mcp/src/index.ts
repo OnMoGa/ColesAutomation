@@ -117,12 +117,12 @@ const toTextContent = (value: unknown) => {
 };
 
 server.registerTool(
-  "coles_get_categories",
+  "coles_list_categories",
   {
     description: "List top-level product categories.",
     inputSchema: z.object({}),
   },
-  async () => toTextContent(await sendCommand("get_categories", {}))
+  async () => toTextContent(await sendCommand("list_categories", {}))
 );
 
 server.registerTool(
