@@ -21,32 +21,32 @@ let socket: WebSocket | null = null;
 let connecting = false;
 let reconnectTimer: number | null = null;
 
-function logInfo(message: string, meta?: unknown) {
+const logInfo = (message: string, meta?: unknown) => {
   if (meta) {
     console.info(`[coles-extension] ${message}`, meta);
   } else {
     console.info(`[coles-extension] ${message}`);
   }
-}
+};
 
-function logError(message: string, meta?: unknown) {
+const logError = (message: string, meta?: unknown) => {
   if (meta) {
     console.error(`[coles-extension] ${message}`, meta);
   } else {
     console.error(`[coles-extension] ${message}`);
   }
-}
+};
 
-async function getConfig(): Promise<StoredConfig> {
+const getConfig = async (): Promise<StoredConfig> => {
   const result = await chrome.storage.local.get(DEFAULT_CONFIG);
   return {
     port: typeof result.port === "number" ? result.port : DEFAULT_CONFIG.port,
     token:
       typeof result.token === "string" ? result.token : DEFAULT_CONFIG.token,
   };
-}
+};
 
-async function connectSocket() {
+const connectSocket = async () => {
   if (socket && socket.readyState === WebSocket.OPEN) {
     return;
   }
@@ -78,9 +78,9 @@ async function connectSocket() {
   socket.onmessage = (event) => {
     void handleSocketMessage(event.data);
   };
-}
+};
 
-function scheduleReconnect() {
+const scheduleReconnect = () => {
   if (reconnectTimer !== null) {
     return;
   }
@@ -88,9 +88,9 @@ function scheduleReconnect() {
     reconnectTimer = null;
     void connectSocket();
   }, 1500) as unknown as number;
-}
+};
 
-async function getActiveColesTab(): Promise<chrome.tabs.Tab | null> {
+const getActiveColesTab = async (): Promise<chrome.tabs.Tab | null> => {
   const [activeTab] = await chrome.tabs.query({
     active: true,
     lastFocusedWindow: true,
@@ -102,12 +102,12 @@ async function getActiveColesTab(): Promise<chrome.tabs.Tab | null> {
     url: "https://www.coles.com.au/*",
   });
   return tabs.length > 0 ? tabs[0] : null;
-}
+};
 
-async function forwardToContentScript(
+const forwardToContentScript = async (
   command: CommandName,
   params: ClientRequest["params"]
-) {
+) => {
   const tab = await getActiveColesTab();
   if (!tab?.id) {
     const error: ResponseError = {
@@ -138,9 +138,9 @@ async function forwardToContentScript(
       },
     };
   }
-}
+};
 
-async function handleSocketMessage(raw: string) {
+const handleSocketMessage = async (raw: string) => {
   let message: ClientRequest;
   try {
     message = JSON.parse(raw) as ClientRequest;
@@ -171,7 +171,7 @@ async function handleSocketMessage(raw: string) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(response));
   }
-}
+};
 
 chrome.runtime.onInstalled.addListener(() => {
   void chrome.storage.local.set(DEFAULT_CONFIG);

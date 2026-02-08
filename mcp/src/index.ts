@@ -75,10 +75,10 @@ wss.on("connection", (socket: WebSocket, request: IncomingMessage) => {
   });
 });
 
-function sendCommand<K extends CommandName>(
+const sendCommand = <K extends CommandName>(
   command: K,
   params: RequestParams[K]
-): Promise<CommandResult[K]> {
+): Promise<CommandResult[K]> => {
   if (!clientSocket || clientSocket.readyState !== WebSocket.OPEN) {
     throw new Error("Extension is not connected.");
   }
@@ -103,9 +103,9 @@ function sendCommand<K extends CommandName>(
     });
     clientSocket?.send(JSON.stringify(request));
   });
-}
+};
 
-function toTextContent(value: unknown) {
+const toTextContent = (value: unknown) => {
   return {
     content: [
       {
@@ -114,7 +114,7 @@ function toTextContent(value: unknown) {
       },
     ],
   };
-}
+};
 
 server.registerTool(
   "coles_get_categories",

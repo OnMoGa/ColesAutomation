@@ -22,15 +22,18 @@ const CATEGORY_IGNORE = new Set([
   "More",
 ]);
 
-function normalizeText(value: string) {
+const normalizeText = (value: string) => {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
-}
+};
 
-function sleep(ms: number) {
+const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
+};
 
-async function waitForCondition(check: () => boolean, timeoutMs = TIMEOUT_MS) {
+const waitForCondition = async (
+  check: () => boolean,
+  timeoutMs = TIMEOUT_MS
+) => {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (check()) {
@@ -39,16 +42,16 @@ async function waitForCondition(check: () => boolean, timeoutMs = TIMEOUT_MS) {
     await sleep(120);
   }
   throw new Error("Timed out waiting for page condition.");
-}
+};
 
-async function waitForSelector(selector: string, timeoutMs = TIMEOUT_MS) {
+const waitForSelector = async (selector: string, timeoutMs = TIMEOUT_MS) => {
   await waitForCondition(
     () => Boolean(document.querySelector(selector)),
     timeoutMs
   );
-}
+};
 
-function findNavCategories(): HTMLAnchorElement[] {
+const findNavCategories = (): HTMLAnchorElement[] => {
   const navs = Array.from(document.querySelectorAll("nav"));
   for (const nav of navs) {
     const links = Array.from(
@@ -65,17 +68,17 @@ function findNavCategories(): HTMLAnchorElement[] {
       'a[href^="/browse"], a[href*="/browse/"]'
     )
   );
-}
+};
 
-async function ensureOnBrowsePage() {
+const ensureOnBrowsePage = async () => {
   await navigateTo(BROWSE_URL);
-}
+};
 
-async function navigateTo(url: string) {
+const navigateTo = async (url: string) => {
   await nextRouter.push(url);
-}
+};
 
-function uniqueTexts(items: string[]) {
+const uniqueTexts = (items: string[]) => {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const item of items) {
@@ -87,9 +90,9 @@ function uniqueTexts(items: string[]) {
     result.push(item);
   }
   return result;
-}
+};
 
-function matchLinkByText(links: HTMLAnchorElement[], text: string) {
+const matchLinkByText = (links: HTMLAnchorElement[], text: string) => {
   const target = normalizeText(text);
   return (
     links.find((link) => normalizeText(link.textContent ?? "") === target) ??
@@ -98,9 +101,9 @@ function matchLinkByText(links: HTMLAnchorElement[], text: string) {
     ) ??
     null
   );
-}
+};
 
-async function openCategory(categoryName: string) {
+const openCategory = async (categoryName: string) => {
   await ensureOnBrowsePage();
   await waitForSelector("a");
   const links = findNavCategories();
@@ -112,9 +115,12 @@ async function openCategory(categoryName: string) {
   await waitForCondition(() =>
     normalizeText(document.title).includes(normalizeText(categoryName))
   );
-}
+};
 
-async function openSubcategory(categoryName: string, subCategoryName: string) {
+const openSubcategory = async (
+  categoryName: string,
+  subCategoryName: string
+) => {
   await openCategory(categoryName);
   await waitForSelector("main");
   const main = document.querySelector("main") ?? document.body;
@@ -131,19 +137,19 @@ async function openSubcategory(categoryName: string, subCategoryName: string) {
   await waitForCondition(() =>
     normalizeText(document.title).includes(normalizeText(subCategoryName))
   );
-}
+};
 
-function extractPrice(text: string) {
+const extractPrice = (text: string) => {
   const match = text.match(/\$\d+(?:\.\d{2})?/);
   return match?.[0];
-}
+};
 
-function extractSize(text: string) {
+const extractSize = (text: string) => {
   const match = text.match(/\b\d+(?:\.\d+)?\s?(?:g|kg|ml|l|L|pack|pk)\b/);
   return match?.[0];
-}
+};
 
-function extractProductsFromPage(limit = 20, offset = 0): Product[] {
+const extractProductsFromPage = (limit = 20, offset = 0): Product[] => {
   const buttons = Array.from(
     document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Add "]')
   );
@@ -182,9 +188,13 @@ function extractProductsFromPage(limit = 20, offset = 0): Product[] {
   }
 
   return products.slice(offset, offset + limit);
-}
+};
 
-async function searchProducts(query: string, limit?: number, offset?: number) {
+const searchProducts = async (
+  query: string,
+  limit?: number,
+  offset?: number
+) => {
   const input =
     document.querySelector<HTMLInputElement>(
       'input[placeholder*="Search products"]'
@@ -210,9 +220,9 @@ async function searchProducts(query: string, limit?: number, offset?: number) {
   await waitForSelector('button[aria-label^="Add "]');
   const products = extractProductsFromPage(limit, offset);
   return { query, products };
-}
+};
 
-function findProductTileById(productId: string) {
+const findProductTileById = (productId: string) => {
   if (productId.startsWith("name:")) {
     const name = productId.replace("name:", "");
     const button = Array.from(
@@ -230,9 +240,9 @@ function findProductTileById(productId: string) {
   return (
     link?.closest<HTMLElement>("article") ?? link?.closest<HTMLElement>("div")
   );
-}
+};
 
-async function addToTrolley(productId: string) {
+const addToTrolley = async (productId: string) => {
   const tile = findProductTileById(productId);
   if (!tile) {
     throw new Error("Product not found on page.");
@@ -252,9 +262,9 @@ async function addToTrolley(productId: string) {
   );
   const quantity = getTileQuantity(tile);
   return { productId, quantity };
-}
+};
 
-function getTileQuantity(tile: HTMLElement) {
+const getTileQuantity = (tile: HTMLElement) => {
   const input = tile.querySelector<HTMLInputElement>(
     'input[role="spinbutton"]'
   );
@@ -265,9 +275,9 @@ function getTileQuantity(tile: HTMLElement) {
   const text = tile.textContent ?? "";
   const match = text.match(/quantity is (\d+)/i);
   return match ? Number(match[1]) : 1;
-}
+};
 
-async function setTrolleyQuantity(productId: string, quantity: number) {
+const setTrolleyQuantity = async (productId: string, quantity: number) => {
   const tile = findProductTileById(productId);
   if (!tile) {
     throw new Error("Product not found on page.");
@@ -301,9 +311,9 @@ async function setTrolleyQuantity(productId: string, quantity: number) {
     updated = getTileQuantity(tile);
   }
   return { productId, quantity: updated };
-}
+};
 
-async function openTrolleyDialog() {
+const openTrolleyDialog = async () => {
   const trolleyButton = Array.from(
     document.querySelectorAll<HTMLButtonElement>("button")
   ).find((button) => {
@@ -331,9 +341,9 @@ async function openTrolleyDialog() {
     throw new Error("Trolley dialog not found.");
   }
   return dialog;
-}
+};
 
-function extractTrolleyItems(dialog: HTMLElement): TrolleyItem[] {
+const extractTrolleyItems = (dialog: HTMLElement): TrolleyItem[] => {
   const items: TrolleyItem[] = [];
   const listItems = Array.from(
     dialog.querySelectorAll<HTMLElement>('[role="listitem"], li')
@@ -362,17 +372,17 @@ function extractTrolleyItems(dialog: HTMLElement): TrolleyItem[] {
     });
   }
   return items;
-}
+};
 
-function parseQuantity(text: string | null) {
+const parseQuantity = (text: string | null) => {
   if (!text) {
     return 1;
   }
   const match = text.match(/quantity(?: is)?\s*(\d+)/i);
   return match ? Number(match[1]) : 1;
-}
+};
 
-function extractTrolleyTotal(dialog: HTMLElement) {
+const extractTrolleyTotal = (dialog: HTMLElement) => {
   const totalHeading = Array.from(
     dialog.querySelectorAll<HTMLElement>("h3, h4, span, div")
   ).find((el) => normalizeText(el.textContent ?? "") === "trolley total");
@@ -385,16 +395,16 @@ function extractTrolleyTotal(dialog: HTMLElement) {
   }
   const price = extractPrice(container.textContent ?? "");
   return price;
-}
+};
 
-async function getTrolley() {
+const getTrolley = async () => {
   const dialog = await openTrolleyDialog();
   const items = extractTrolleyItems(dialog);
   const total = extractTrolleyTotal(dialog);
   return { items, total };
-}
+};
 
-async function clearTrolley() {
+const clearTrolley = async () => {
   const dialog = await openTrolleyDialog();
   const clearButton = Array.from(
     dialog.querySelectorAll<HTMLButtonElement>("button")
@@ -407,9 +417,9 @@ async function clearTrolley() {
   clearButton.click();
   await sleep(300);
   return { cleared: true };
-}
+};
 
-async function removeFromTrolley(productId: string) {
+const removeFromTrolley = async (productId: string) => {
   const dialog = await openTrolleyDialog();
   const listItems = Array.from(
     dialog.querySelectorAll<HTMLElement>('[role="listitem"], li')
@@ -441,9 +451,9 @@ async function removeFromTrolley(productId: string) {
     return { productId };
   }
   throw new Error("Product not found in trolley.");
-}
+};
 
-async function reviewOrder() {
+const reviewOrder = async () => {
   const dialog = await openTrolleyDialog();
   const items = extractTrolleyItems(dialog);
   const total = extractTrolleyTotal(dialog);
@@ -455,9 +465,9 @@ async function reviewOrder() {
     total,
     checkoutEnabled: checkoutButton ? !checkoutButton.disabled : undefined,
   };
-}
+};
 
-async function getCategories() {
+const getCategories = async () => {
   await ensureOnBrowsePage();
   await waitForSelector("a");
   const links = findNavCategories();
@@ -468,9 +478,9 @@ async function getCategories() {
       .filter((text) => text && !CATEGORY_IGNORE.has(text))
   );
   return { categories };
-}
+};
 
-async function listSubcategories(categoryName: string) {
+const listSubcategories = async (categoryName: string) => {
   await openCategory(categoryName);
   await waitForSelector("main");
   const main = document.querySelector("main") ?? document.body;
@@ -488,26 +498,26 @@ async function listSubcategories(categoryName: string) {
       )
   );
   return { categoryName, subcategories };
-}
+};
 
-async function listSubcategoryProducts(
+const listSubcategoryProducts = async (
   categoryName: string,
   subCategoryName: string,
   limit?: number,
   offset?: number
-) {
+) => {
   await openSubcategory(categoryName, subCategoryName);
   await waitForSelector('button[aria-label^="Add "]');
   const products = extractProductsFromPage(limit, offset);
   return { categoryName, subCategoryName, products };
-}
+};
 
-export function runCommand<TCommand extends CommandName>(
+export const runCommand = <TCommand extends CommandName>(
   command: TCommand,
   params: RequestParams[TCommand]
-): Promise<CommandResult[TCommand]> {
+): Promise<CommandResult[TCommand]> => {
   return commandHandlers[command](params);
-}
+};
 
 export const commandHandlers: {
   [K in CommandName]: (params: RequestParams[K]) => Promise<CommandResult[K]>;
