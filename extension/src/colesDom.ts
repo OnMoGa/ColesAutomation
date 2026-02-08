@@ -5,6 +5,7 @@ import {
   RequestParams,
   TrolleyItem,
 } from "../../shared/protocol";
+import { nextRouter } from "./nextRouter";
 
 console.log("Coles DOM script loaded");
 
@@ -67,10 +68,11 @@ function findNavCategories(): HTMLAnchorElement[] {
 }
 
 async function ensureOnBrowsePage() {
-  if (!location.href.startsWith(BROWSE_URL)) {
-    location.assign(BROWSE_URL);
-    await waitForCondition(() => location.href.startsWith(BROWSE_URL));
-  }
+  await navigateTo(BROWSE_URL);
+}
+
+async function navigateTo(url: string) {
+  await nextRouter.push(url);
 }
 
 function uniqueTexts(items: string[]) {

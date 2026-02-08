@@ -1,12 +1,10 @@
-import {
-  ClientRequest,
-  ClientResponse,
-  CommandName,
-  RequestParams,
-} from "../../shared/protocol";
-import { commandHandlers, runCommand } from "./colesDom";
+import { ClientRequest, ClientResponse } from "../../shared/protocol";
+import { runCommand } from "./colesDom";
+import { injectRouterBridge } from "./nextRouter";
 
 console.log("Content script loaded");
+
+injectRouterBridge();
 
 type ContentResponse = Omit<ClientResponse, "id" | "type" | "command">;
 
