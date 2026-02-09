@@ -29,12 +29,10 @@ export type RequestParams = {
 };
 
 export type Product = {
-  productId: string;
+  id: string;
   name: string;
-  price?: string;
-  size?: string;
-  availability?: string;
-  productUrl?: string;
+  price: string;
+  productUrl: string;
 };
 
 export type TrolleyItem = {
@@ -51,10 +49,7 @@ export type CommandResult = {
   list_categories: { categories: string[] };
   list_subcategories: { subcategories: string[] };
   list_subcategory_products: {
-    categoryName: string;
-    subCategoryName: string;
     products: Product[];
-    total?: number;
   };
   search_products: { query: string; products: Product[]; total?: number };
   add_to_trolley: { productId: string; quantity: number };

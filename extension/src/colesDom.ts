@@ -10,17 +10,8 @@ import { nextRouter } from "./nextRouter";
 console.log("Coles DOM script loaded");
 
 const COLES_ORIGIN = "https://www.coles.com.au";
-const BROWSE_URL = `${COLES_ORIGIN}/browse`;
 
 const TIMEOUT_MS = 12000;
-
-const CATEGORY_IGNORE = new Set([
-  "Shop products",
-  "Browse Products",
-  "Specials & catalogues",
-  "Bought before",
-  "More",
-]);
 
 const normalizeText = (value: string) => {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
@@ -141,45 +132,41 @@ const extractSize = (text: string) => {
   return match?.[0];
 };
 
-const extractProductsFromPage = (limit = 20, offset = 0): Product[] => {
-  const buttons = Array.from(
-    document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Add "]')
+const extractProductsFromPage = (): Product[] => {
+  const container = document.querySelector<HTMLElement>(
+    '[data-testid="product-tiles"]'
   );
-  const products: Product[] = [];
-
-  for (const button of buttons) {
-    const label = button.getAttribute("aria-label") ?? "";
-    const nameMatch = label.match(/^Add (.*) to the trolley$/);
-    if (!nameMatch) {
-      continue;
-    }
-    const name = nameMatch[1];
-    const tile =
-      button.closest<HTMLElement>("article") ??
-      button.closest<HTMLElement>('[data-testid*="product"]') ??
-      button.closest<HTMLElement>("div");
-    const link =
-      tile?.querySelector<HTMLAnchorElement>('a[href*="/product"]') ??
-      tile?.querySelector<HTMLAnchorElement>('a[href*="/items"]') ??
-      null;
-    const productUrl = link?.href;
-    const productId = productUrl ?? `name:${name}`;
-    const text = tile?.textContent ?? "";
-    const price = extractPrice(text);
-    const size = extractSize(text);
-    const availability = button.disabled ? "unavailable" : "available";
-
-    products.push({
-      productId,
-      name,
-      price,
-      size,
-      availability,
-      productUrl,
-    });
+  if (!container) {
+    throw new Error("Product tiles container not found.");
   }
+  const productTiles = Array.from(
+    container.querySelectorAll<HTMLElement>('[data-testid="product-tile"]')
+  );
 
-  return products.slice(offset, offset + limit);
+  var products: Product[] = productTiles.map((productTile) => {
+    var productId =
+      productTile
+        .querySelector("[data-bv-product-id]")
+        ?.getAttribute("data-bv-product-id") ?? "unknown";
+
+    var productLink = productTile.querySelector<HTMLAnchorElement>(
+      'a[href*="/product/"]'
+    );
+    var productName = productLink?.getAttribute("aria-label") ?? "";
+    var productPrice =
+      productTile.querySelector<HTMLSpanElement>(
+        '[data-testid="product-pricing"]'
+      )?.innerText ?? "";
+
+    return {
+      id: productId,
+      name: productName,
+      price: productPrice,
+      productUrl: productLink?.href ?? "",
+    };
+  });
+
+  return products;
 };
 
 const searchProducts = async (
@@ -210,7 +197,7 @@ const searchProducts = async (
 
   await waitForCondition(() => location.href.includes("/search/products"));
   await waitForSelector('button[aria-label^="Add "]');
-  const products = extractProductsFromPage(limit, offset);
+  const products = extractProductsFromPage();
   return { query, products };
 };
 
@@ -492,29 +479,30 @@ interface Category {
 }
 interface Subcategory {
   name: string;
+  url: string;
   products?: Product[];
 }
 
-let categories: Category[] | undefined = undefined;
+let categoriesCache: Category[] | undefined = undefined;
 const getCategories = async () => {
-  if (!categories) {
-    await navigateTo(BROWSE_URL);
+  if (!categoriesCache) {
+    await navigateTo(`${COLES_ORIGIN}/browse`);
     const links = findNavCategories();
-    categories = links.map((link) => {
+    categoriesCache = links.map((link) => {
       return {
         name: link.textContent ?? "",
         url: link.href,
       };
     });
   }
-  return categories;
+  return categoriesCache;
 };
 
-const getSubcategories = async (categoryName: string) => {
-  if (!categories) {
-    await getCategories();
-  }
-  const category = categories?.find(
+const getSubcategories = async (
+  categoryName: string
+): Promise<Subcategory[]> => {
+  const categories = await getCategories();
+  const category = categories.find(
     (category) => category.name === categoryName
   );
   if (!category) {
@@ -536,8 +524,21 @@ const getSubcategories = async (categoryName: string) => {
       };
     });
   }
-
   return category.subcategories;
+};
+
+const getSubcategoryProducts = async (
+  categoryName: string,
+  subCategoryName: string
+) => {
+  const subcategory = (await getSubcategories(categoryName)).find(
+    (subcategory) => subcategory.name === subCategoryName
+  );
+  if (!subcategory) {
+    throw new Error(`Subcategory not found: ${subCategoryName}`);
+  }
+  await navigateTo(subcategory.url);
+  return extractProductsFromPage();
 };
 
 export const runCommand = <TCommand extends CommandName>(
@@ -559,9 +560,7 @@ export const commandHandlers: {
     ),
   }),
   list_subcategory_products: async (p) => ({
-    categoryName: p.categoryName,
-    subCategoryName: p.subCategoryName,
-    products: [],
+    products: await getSubcategoryProducts(p.categoryName, p.subCategoryName),
   }),
   search_products: async (p) =>
     await searchProducts(p.query, p.limit, p.offset),

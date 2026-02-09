@@ -20,6 +20,15 @@ const DEFAULT_CONFIG: StoredConfig = {
 let socket: WebSocket | null = null;
 let connecting = false;
 let reconnectTimer: number | null = null;
+type ConnectionStatus = "connected" | "disconnected" | "connecting";
+
+let currentStatus: ConnectionStatus | null = null;
+
+const STATUS_COLORS: Record<ConnectionStatus, string> = {
+  connected: "#22c55e",
+  disconnected: "#ef4444",
+  connecting: "#f59e0b",
+};
 
 const logInfo = (message: string, meta?: unknown) => {
   if (meta) {
@@ -35,6 +44,33 @@ const logError = (message: string, meta?: unknown) => {
   } else {
     console.error(`[coles-extension] ${message}`);
   }
+};
+
+const drawStatusIcon = (color: string, size: number) => {
+  const canvas = new OffscreenCanvas(size, size);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Failed to create canvas context.");
+  }
+  ctx.clearRect(0, 0, size, size);
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  return ctx.getImageData(0, 0, size, size);
+};
+
+const updateStatusIcon = (status: ConnectionStatus) => {
+  if (currentStatus === status) {
+    return;
+  }
+  currentStatus = status;
+  const color = STATUS_COLORS[status];
+  const imageData = {
+    16: drawStatusIcon(color, 16),
+    32: drawStatusIcon(color, 32),
+  };
+  chrome.action.setIcon({ imageData });
 };
 
 const getConfig = async (): Promise<StoredConfig> => {
@@ -54,6 +90,7 @@ const connectSocket = async () => {
     return;
   }
   connecting = true;
+  updateStatusIcon("connecting");
   const { port, token } = await getConfig();
   const url = `ws://localhost:${port}/?token=${encodeURIComponent(token)}`;
   socket = new WebSocket(url);
@@ -61,17 +98,20 @@ const connectSocket = async () => {
   socket.onopen = () => {
     connecting = false;
     logInfo("WebSocket connected");
+    updateStatusIcon("connected");
   };
 
   socket.onclose = () => {
     connecting = false;
     logInfo("WebSocket disconnected");
+    updateStatusIcon("disconnected");
     scheduleReconnect();
   };
 
   socket.onerror = (event) => {
     connecting = false;
     logError("WebSocket error", event);
+    updateStatusIcon("disconnected");
     scheduleReconnect();
   };
 

@@ -3,6 +3,9 @@
   "name": "Coles MCP Bridge",
   "version": "0.1.0",
   "description": "Bridge Coles web UI actions to a local MCP server.",
+  "action": {
+    "default_title": "Coles MCP Bridge"
+  },
   "permissions": ["storage", "tabs", "activeTab"],
   "host_permissions": ["https://www.coles.com.au/*"],
   "background": {
