@@ -1,4 +1,5 @@
 import { Product } from "../../../shared/protocol";
+import { updateProductCacheBulk } from "../caches/productCache";
 import { navigateTo } from "../colesDom";
 import { getSubcategories } from "./getSubcategories";
 
@@ -49,6 +50,8 @@ const extractProductsFromPage = (): Product[] => {
       productUrl: productLink?.href ?? "",
     };
   });
+
+  updateProductCacheBulk(products);
 
   return products;
 };

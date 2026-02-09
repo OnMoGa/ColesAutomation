@@ -5,9 +5,11 @@ import {
   RequestParams,
   TrolleyItem,
 } from "../../shared/protocol";
+import { addProductToCart } from "./commandHandlers/addProductToCart";
 import { getCategories } from "./commandHandlers/getCategories";
 import { getSubcategories } from "./commandHandlers/getSubcategories";
 import { getSubcategoryProducts } from "./commandHandlers/getSubcategoryProducts";
+import { setCartQuantity } from "./commandHandlers/setCartQuantity";
 import { nextRouter } from "./nextRouter";
 
 console.log("Coles DOM script loaded");
@@ -20,7 +22,7 @@ const normalizeText = (value: string) => {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
 };
 
-const sleep = (ms: number) => {
+export const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
@@ -168,28 +170,6 @@ const findProductTileById = (productId: string) => {
   );
 };
 
-const addToTrolley = async (productId: string) => {
-  const tile = findProductTileById(productId);
-  if (!tile) {
-    throw new Error("Product not found on page.");
-  }
-  const addButton = tile.querySelector<HTMLButtonElement>(
-    'button[aria-label^="Add "]'
-  );
-  if (!addButton) {
-    throw new Error("Add button not found.");
-  }
-  addButton.click();
-  await waitForCondition(() =>
-    Boolean(
-      tile.querySelector('button[aria-label^="Increase "]') ||
-        tile.querySelector('input[role="spinbutton"]')
-    )
-  );
-  const quantity = getTileQuantity(tile);
-  return { productId, quantity };
-};
-
 const getTileQuantity = (tile: HTMLElement) => {
   const input = tile.querySelector<HTMLInputElement>(
     'input[role="spinbutton"]'
@@ -203,41 +183,41 @@ const getTileQuantity = (tile: HTMLElement) => {
   return match ? Number(match[1]) : 1;
 };
 
-const setTrolleyQuantity = async (productId: string, quantity: number) => {
-  const tile = findProductTileById(productId);
-  if (!tile) {
-    throw new Error("Product not found on page.");
-  }
-  if (quantity < 0) {
-    throw new Error("Quantity must be 0 or greater.");
-  }
-  const current = getTileQuantity(tile);
-  if (current === 0) {
-    await addToTrolley(productId);
-  }
-  let updated = getTileQuantity(tile);
-  const increaseButton = tile.querySelector<HTMLButtonElement>(
-    'button[aria-label^="Increase "]'
-  );
-  const decreaseButton = tile.querySelector<HTMLButtonElement>(
-    'button[aria-label^="Decrease "]'
-  );
-  if (!increaseButton || !decreaseButton) {
-    throw new Error("Quantity controls not found.");
-  }
+// const setTrolleyQuantity = async (productId: string, quantity: number) => {
+//   const tile = findProductTileById(productId);
+//   if (!tile) {
+//     throw new Error("Product not found on page.");
+//   }
+//   if (quantity < 0) {
+//     throw new Error("Quantity must be 0 or greater.");
+//   }
+//   const current = getTileQuantity(tile);
+//   if (current === 0) {
+//     await addToTrolley(productId);
+//   }
+//   let updated = getTileQuantity(tile);
+//   const increaseButton = tile.querySelector<HTMLButtonElement>(
+//     'button[aria-label^="Increase "]'
+//   );
+//   const decreaseButton = tile.querySelector<HTMLButtonElement>(
+//     'button[aria-label^="Decrease "]'
+//   );
+//   if (!increaseButton || !decreaseButton) {
+//     throw new Error("Quantity controls not found.");
+//   }
 
-  while (updated < quantity) {
-    increaseButton.click();
-    await sleep(120);
-    updated = getTileQuantity(tile);
-  }
-  while (updated > quantity) {
-    decreaseButton.click();
-    await sleep(120);
-    updated = getTileQuantity(tile);
-  }
-  return { productId, quantity: updated };
-};
+//   while (updated < quantity) {
+//     increaseButton.click();
+//     await sleep(120);
+//     updated = getTileQuantity(tile);
+//   }
+//   while (updated > quantity) {
+//     decreaseButton.click();
+//     await sleep(120);
+//     updated = getTileQuantity(tile);
+//   }
+//   return { productId, quantity: updated };
+// };
 
 const openTrolleyDialog = async () => {
   const trolleyButton = Array.from(
@@ -417,9 +397,9 @@ export const commandHandlers: {
   search_products: async (p) => {
     throw new Error("Not implemented.");
   },
-  add_to_trolley: async (p) => await addToTrolley(p.productId),
+  add_to_trolley: async (p) => await addProductToCart(p.productId),
   set_trolley_quantity: async (p) =>
-    await setTrolleyQuantity(p.productId, p.quantity),
+    await setCartQuantity(p.productId, p.quantity),
   get_trolley: async () => await getTrolley(),
   remove_from_trolley: async (p) => await removeFromTrolley(p.productId),
   clear_trolley: async () => await clearTrolley(),

@@ -52,8 +52,8 @@ export type CommandResult = {
     products: Product[];
   };
   search_products: { query: string; products: Product[]; total?: number };
-  add_to_trolley: { productId: string; quantity: number };
-  set_trolley_quantity: { productId: string; quantity: number };
+  add_to_trolley: { quantity: number };
+  set_trolley_quantity: { quantity: number };
   get_trolley: { items: TrolleyItem[]; total?: string };
   remove_from_trolley: { productId: string };
   clear_trolley: { cleared: boolean };

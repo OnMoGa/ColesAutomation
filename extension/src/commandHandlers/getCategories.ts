@@ -2,7 +2,7 @@ import { Product } from "../../../shared/protocol";
 import { COLES_ORIGIN, navigateTo } from "../colesDom";
 import { Subcategory } from "./getSubcategories";
 
-interface Category {
+export interface Category {
   name: string;
   url: string;
   subcategories?: Subcategory[];
