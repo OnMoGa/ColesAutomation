@@ -5,11 +5,14 @@ import {
   RequestParams,
   TrolleyItem,
 } from "../../shared/protocol";
+import { getCategories } from "./commandHandlers/getCategories";
+import { getSubcategories } from "./commandHandlers/getSubcategories";
+import { getSubcategoryProducts } from "./commandHandlers/getSubcategoryProducts";
 import { nextRouter } from "./nextRouter";
 
 console.log("Coles DOM script loaded");
 
-const COLES_ORIGIN = "https://www.coles.com.au";
+export const COLES_ORIGIN = "https://www.coles.com.au";
 
 const TIMEOUT_MS = 12000;
 
@@ -42,26 +45,7 @@ const waitForSelector = async (selector: string, timeoutMs = TIMEOUT_MS) => {
   );
 };
 
-const findNavCategories = (): HTMLAnchorElement[] => {
-  const navs = Array.from(document.querySelectorAll("nav"));
-  for (const nav of navs) {
-    const links = Array.from(
-      nav.querySelectorAll<HTMLAnchorElement>(
-        'a[href^="/browse"], a[href*="/browse/"]'
-      )
-    );
-    if (links.length >= 8) {
-      return links;
-    }
-  }
-  return Array.from(
-    document.querySelectorAll<HTMLAnchorElement>(
-      'a[href^="/browse"], a[href*="/browse/"]'
-    )
-  );
-};
-
-const navigateTo = async (url: string) => {
+export const navigateTo = async (url: string) => {
   await nextRouter.push(url);
 };
 
@@ -132,74 +116,37 @@ const extractSize = (text: string) => {
   return match?.[0];
 };
 
-const extractProductsFromPage = (): Product[] => {
-  const container = document.querySelector<HTMLElement>(
-    '[data-testid="product-tiles"]'
-  );
-  if (!container) {
-    throw new Error("Product tiles container not found.");
-  }
-  const productTiles = Array.from(
-    container.querySelectorAll<HTMLElement>('[data-testid="product-tile"]')
-  );
+// const searchProducts = async (
+//   query: string,
+//   limit?: number,
+//   offset?: number
+// ) => {
+//   const input =
+//     document.querySelector<HTMLInputElement>(
+//       'input[placeholder*="Search products"]'
+//     ) ?? document.querySelector<HTMLInputElement>('input[name="q"]');
+//   if (!input) {
+//     throw new Error("Search input not found.");
+//   }
+//   input.focus();
+//   input.value = query;
+//   input.dispatchEvent(new Event("input", { bubbles: true }));
+//   const searchButton =
+//     document.querySelector<HTMLButtonElement>('button[aria-label="Search"]') ??
+//     Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+//       (button) => normalizeText(button.textContent ?? "") === "search"
+//     );
+//   if (searchButton) {
+//     searchButton.click();
+//   } else {
+//     input.form?.requestSubmit();
+//   }
 
-  var products: Product[] = productTiles.map((productTile) => {
-    var productId =
-      productTile
-        .querySelector("[data-bv-product-id]")
-        ?.getAttribute("data-bv-product-id") ?? "unknown";
-
-    var productLink = productTile.querySelector<HTMLAnchorElement>(
-      'a[href*="/product/"]'
-    );
-    var productName = productLink?.getAttribute("aria-label") ?? "";
-    var productPrice =
-      productTile.querySelector<HTMLSpanElement>(
-        '[data-testid="product-pricing"]'
-      )?.innerText ?? "";
-
-    return {
-      id: productId,
-      name: productName,
-      price: productPrice,
-      productUrl: productLink?.href ?? "",
-    };
-  });
-
-  return products;
-};
-
-const searchProducts = async (
-  query: string,
-  limit?: number,
-  offset?: number
-) => {
-  const input =
-    document.querySelector<HTMLInputElement>(
-      'input[placeholder*="Search products"]'
-    ) ?? document.querySelector<HTMLInputElement>('input[name="q"]');
-  if (!input) {
-    throw new Error("Search input not found.");
-  }
-  input.focus();
-  input.value = query;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  const searchButton =
-    document.querySelector<HTMLButtonElement>('button[aria-label="Search"]') ??
-    Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
-      (button) => normalizeText(button.textContent ?? "") === "search"
-    );
-  if (searchButton) {
-    searchButton.click();
-  } else {
-    input.form?.requestSubmit();
-  }
-
-  await waitForCondition(() => location.href.includes("/search/products"));
-  await waitForSelector('button[aria-label^="Add "]');
-  const products = extractProductsFromPage();
-  return { query, products };
-};
+//   await waitForCondition(() => location.href.includes("/search/products"));
+//   await waitForSelector('button[aria-label^="Add "]');
+//   const products = extractProductsFromPage();
+//   return { query, products };
+// };
 
 const findProductTileById = (productId: string) => {
   if (productId.startsWith("name:")) {
@@ -446,101 +393,6 @@ const reviewOrder = async () => {
   };
 };
 
-// const listSubcategories = async (categoryName: string) => {
-//   await gotoProductCategory(categoryName);
-
-//   const navList = document.querySelector('[data-testid="navigation-list"]');
-//   if (!navList) {
-//     throw new Error("Navigation list not found.");
-//   }
-//   const links = Array.from(
-//     navList.querySelectorAll<HTMLAnchorElement>('[data-testid="nav-link"]')
-//   );
-//   const subcategories = links.map((link) => link.textContent);
-//   return { categoryName, subcategories };
-// };
-
-// const listSubcategoryProducts = async (
-//   categoryName: string,
-//   subCategoryName: string,
-//   limit?: number,
-//   offset?: number
-// ) => {
-//   await openSubcategory(categoryName, subCategoryName);
-//   await waitForSelector('button[aria-label^="Add "]');
-//   const products = extractProductsFromPage(limit, offset);
-//   return { categoryName, subCategoryName, products };
-// };
-
-interface Category {
-  name: string;
-  url: string;
-  subcategories?: Subcategory[];
-}
-interface Subcategory {
-  name: string;
-  url: string;
-  products?: Product[];
-}
-
-let categoriesCache: Category[] | undefined = undefined;
-const getCategories = async () => {
-  if (!categoriesCache) {
-    await navigateTo(`${COLES_ORIGIN}/browse`);
-    const links = findNavCategories();
-    categoriesCache = links.map((link) => {
-      return {
-        name: link.textContent ?? "",
-        url: link.href,
-      };
-    });
-  }
-  return categoriesCache;
-};
-
-const getSubcategories = async (
-  categoryName: string
-): Promise<Subcategory[]> => {
-  const categories = await getCategories();
-  const category = categories.find(
-    (category) => category.name === categoryName
-  );
-  if (!category) {
-    throw new Error(`Category not found: ${categoryName}`);
-  }
-  if (!category.subcategories) {
-    await navigateTo(category.url);
-    const navList = document.querySelector('[data-testid="navigation-list"]');
-    if (!navList) {
-      throw new Error("Navigation list not found.");
-    }
-    const links = Array.from(
-      navList.querySelectorAll<HTMLAnchorElement>('[data-testid="nav-link"]')
-    );
-    category.subcategories = links.map((link) => {
-      return {
-        name: link.textContent,
-        url: link.href,
-      };
-    });
-  }
-  return category.subcategories;
-};
-
-const getSubcategoryProducts = async (
-  categoryName: string,
-  subCategoryName: string
-) => {
-  const subcategory = (await getSubcategories(categoryName)).find(
-    (subcategory) => subcategory.name === subCategoryName
-  );
-  if (!subcategory) {
-    throw new Error(`Subcategory not found: ${subCategoryName}`);
-  }
-  await navigateTo(subcategory.url);
-  return extractProductsFromPage();
-};
-
 export const runCommand = <TCommand extends CommandName>(
   command: TCommand,
   params: RequestParams[TCommand]
@@ -562,8 +414,9 @@ export const commandHandlers: {
   list_subcategory_products: async (p) => ({
     products: await getSubcategoryProducts(p.categoryName, p.subCategoryName),
   }),
-  search_products: async (p) =>
-    await searchProducts(p.query, p.limit, p.offset),
+  search_products: async (p) => {
+    throw new Error("Not implemented.");
+  },
   add_to_trolley: async (p) => await addToTrolley(p.productId),
   set_trolley_quantity: async (p) =>
     await setTrolleyQuantity(p.productId, p.quantity),
