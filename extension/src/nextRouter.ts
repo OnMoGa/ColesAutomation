@@ -33,31 +33,16 @@ const waitForResponse = async (requestId: string): Promise<void> => {
     };
 
     window.addEventListener(ROUTER_PUSH_DONE_EVENT, onDone);
-    window.dispatchEvent(
-      new CustomEvent(ROUTER_PUSH_EVENT, { detail: { requestId } })
-    );
   });
 };
 
 export const nextRouter: NextRouter = {
   push: async (url: string) => {
     const requestId = createRequestId();
+    var response = waitForResponse(requestId);
     window.dispatchEvent(
       new CustomEvent(ROUTER_PUSH_EVENT, { detail: { url, requestId } })
     );
-    await waitForResponse(requestId);
+    await response;
   },
-};
-
-let bridgeInjected = false;
-export const injectRouterBridge = (): void => {
-  if (bridgeInjected) {
-    console.log("Router bridge already injected");
-    return;
-  }
-  const script = document.createElement("script");
-  script.src = chrome.runtime.getURL("dist/injected/nextRouterBridge.js");
-  script.type = "module";
-  (document.documentElement ?? document.head)?.appendChild(script);
-  bridgeInjected = true;
 };

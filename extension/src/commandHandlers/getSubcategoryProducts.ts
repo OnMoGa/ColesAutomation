@@ -46,7 +46,7 @@ const extractProductsFromPage = (): Product[] => {
     return {
       id: productId,
       name: productName,
-      price: productPrice,
+      price: Number(productPrice),
       productUrl: productLink?.href ?? "",
     };
   });

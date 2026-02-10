@@ -12,7 +12,7 @@ import { getSubcategoryProducts } from "./commandHandlers/getSubcategoryProducts
 import { setCartQuantity } from "./commandHandlers/setCartQuantity";
 import { nextRouter } from "./nextRouter";
 
-console.log("Coles DOM script loaded");
+console.log("[ColesAutomation] Coles DOM script loaded");
 
 export const COLES_ORIGIN = "https://www.coles.com.au";
 
@@ -371,37 +371,4 @@ const reviewOrder = async () => {
     total,
     checkoutEnabled: checkoutButton ? !checkoutButton.disabled : undefined,
   };
-};
-
-export const runCommand = <TCommand extends CommandName>(
-  command: TCommand,
-  params: RequestParams[TCommand]
-): Promise<CommandResult[TCommand]> => {
-  return commandHandlers[command](params);
-};
-
-export const commandHandlers: {
-  [K in CommandName]: (params: RequestParams[K]) => Promise<CommandResult[K]>;
-} = {
-  list_categories: async () => ({
-    categories: (await getCategories()).map((category) => category.name),
-  }),
-  list_subcategories: async (p) => ({
-    subcategories: (await getSubcategories(p.categoryName)).map(
-      (subcategory) => subcategory.name
-    ),
-  }),
-  list_subcategory_products: async (p) => ({
-    products: await getSubcategoryProducts(p.categoryName, p.subCategoryName),
-  }),
-  search_products: async (p) => {
-    throw new Error("Not implemented.");
-  },
-  add_to_trolley: async (p) => await addProductToCart(p.productId),
-  set_trolley_quantity: async (p) =>
-    await setCartQuantity(p.productId, p.quantity),
-  get_trolley: async () => await getTrolley(),
-  remove_from_trolley: async (p) => await removeFromTrolley(p.productId),
-  clear_trolley: async () => await clearTrolley(),
-  review_order: async () => await reviewOrder(),
 };

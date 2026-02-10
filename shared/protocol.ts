@@ -31,16 +31,16 @@ export type RequestParams = {
 export type Product = {
   id: string;
   name: string;
-  price: string;
+  price: number;
   productUrl: string;
 };
 
 export type TrolleyItem = {
-  productId?: string;
+  productId: string;
   name: string;
   quantity: number;
-  price?: string;
-  totalPrice?: string;
+  price: number;
+  totalPrice: number;
   productUrl?: string;
 };
 
@@ -54,7 +54,7 @@ export type CommandResult = {
   search_products: { query: string; products: Product[]; total?: number };
   add_to_trolley: { quantity: number };
   set_trolley_quantity: { quantity: number };
-  get_trolley: { items: TrolleyItem[]; total?: string };
+  get_trolley: { items: TrolleyItem[] };
   remove_from_trolley: { productId: string };
   clear_trolley: { cleared: boolean };
   review_order: {

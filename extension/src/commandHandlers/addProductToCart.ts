@@ -1,5 +1,5 @@
 import { getProductById } from "../caches/productCache";
-import { navigateTo } from "../colesDom";
+import { navigateTo, sleep } from "../colesDom";
 
 export const addProductToCart = async (productId: string) => {
   const product = getProductById(productId);
@@ -17,17 +17,18 @@ export const addProductToCart = async (productId: string) => {
   const addButton = buyContainer.querySelector<HTMLButtonElement>(
     '[data-testid="add-to-cart-button"]'
   );
-  if (!addButton) {
-    throw new Error("Add button not found.");
-  }
-  addButton.click();
 
-  const quantityInput = document.querySelector<HTMLInputElement>(
+  if (addButton) {
+    addButton.click();
+    await sleep(500);
+  }
+
+  const quantityInput = buyContainer.querySelector<HTMLInputElement>(
     '[data-testid="quantity-input"]'
   );
 
   if (!quantityInput) {
-    throw new Error("Add button not found.");
+    throw new Error("Quantity input not found.");
   }
 
   const quantity = Number(quantityInput.value);

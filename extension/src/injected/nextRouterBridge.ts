@@ -4,7 +4,7 @@ import {
   ROUTER_PUSH_EVENT,
 } from "../nextRouter";
 
-console.log("Next router bridge script loaded");
+console.log("[ColesAutomation] Next router bridge script loaded");
 
 const getNextRouter = (): NextRouter => {
   return (window as any).next?.router as NextRouter;

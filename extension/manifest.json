@@ -16,12 +16,12 @@
     {
       "matches": ["https://www.coles.com.au/*"],
       "js": ["dist/content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["dist/injected/nextRouterBridge.js"],
+      "resources": ["dist/injected/nextRouterBridge.js", "dist/injected/fetchHook.js", "dist/injected/xhrHook.js"],
       "matches": ["https://www.coles.com.au/*"]
     }
   ]

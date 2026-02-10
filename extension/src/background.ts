@@ -5,7 +5,7 @@ import {
   ResponseError,
 } from "../../shared/protocol";
 
-console.log("Background script loaded");
+console.log("[ColesAutomation] Background script loaded");
 
 type StoredConfig = {
   port: number;
@@ -32,17 +32,17 @@ const STATUS_COLORS: Record<ConnectionStatus, string> = {
 
 const logInfo = (message: string, meta?: unknown) => {
   if (meta) {
-    console.info(`[coles-extension] ${message}`, meta);
+    console.info(`[ColesAutomation] ${message}`, meta);
   } else {
-    console.info(`[coles-extension] ${message}`);
+    console.info(`[ColesAutomation] ${message}`);
   }
 };
 
 const logError = (message: string, meta?: unknown) => {
   if (meta) {
-    console.error(`[coles-extension] ${message}`, meta);
+    console.error(`[ColesAutomation] ${message}`, meta);
   } else {
-    console.error(`[coles-extension] ${message}`);
+    console.error(`[ColesAutomation] ${message}`);
   }
 };
 
@@ -185,12 +185,15 @@ const handleSocketMessage = async (raw: string) => {
   try {
     message = JSON.parse(raw) as ClientRequest;
   } catch (error) {
-    logError("Invalid JSON from MCP server", error);
+    logError(
+      "Error in handleSocketMessage: Invalid JSON from MCP server",
+      error
+    );
     return;
   }
 
   if (message?.type !== "request" || !message.command || !message.id) {
-    logError("Malformed request", message);
+    logError("Error in handleSocketMessage: Malformed request", message);
     return;
   }
 

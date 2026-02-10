@@ -60,7 +60,11 @@ wss.on("connection", (socket: WebSocket, request: IncomingMessage) => {
         entry.resolve(message.result as CommandResult[CommandName]);
       } else {
         entry.reject(
-          new Error(message.error?.message ?? "Unknown extension error.")
+          new Error(
+            `Error received from extension: ${
+              message.error?.message ?? "Unknown extension error."
+            }`
+          )
         );
       }
     } catch {
@@ -80,7 +84,7 @@ const sendCommand = <K extends CommandName>(
   params: RequestParams[K]
 ): Promise<CommandResult[K]> => {
   if (!clientSocket || clientSocket.readyState !== WebSocket.OPEN) {
-    throw new Error("Extension is not connected.");
+    throw new Error("Error in sendCommand: Extension is not connected.");
   }
   const id = randomUUID();
   const request: ClientRequest<K> = {
@@ -93,7 +97,7 @@ const sendCommand = <K extends CommandName>(
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       pending.delete(id);
-      reject(new Error("Extension request timed out."));
+      reject(new Error("Error in sendCommand: Extension request timed out."));
     }, REQUEST_TIMEOUT_MS);
 
     pending.set(id, {
@@ -190,7 +194,8 @@ server.registerTool(
 server.registerTool(
   "coles_set_trolley_quantity",
   {
-    description: "Set the quantity of a product in the trolley.",
+    description:
+      "Set the quantity of a product in the trolley by its productId.",
     inputSchema: z.object({
       productId: z.string().min(1),
       quantity: z.number().int().min(0),
@@ -205,7 +210,7 @@ server.registerTool(
 server.registerTool(
   "coles_get_trolley",
   {
-    description: "Get the current trolley contents and total.",
+    description: "Get the current trolley contents.",
     inputSchema: z.object({}),
   },
   async () => toTextContent(await sendCommand("get_trolley", {}))
