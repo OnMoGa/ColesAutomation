@@ -1,5 +1,9 @@
 export interface NextRouter {
   push: (url: string) => Promise<void>;
+  events: {
+    on: (event: string, callback: (url: string) => void) => void;
+    off: (event: string, callback: (url: string) => void) => void;
+  };
 }
 
 export const ROUTER_PUSH_EVENT = "coles:router-push";
@@ -41,7 +45,7 @@ export const nextRouter: NextRouter = {
     const requestId = createRequestId();
     var response = waitForResponse(requestId);
     window.dispatchEvent(
-      new CustomEvent(ROUTER_PUSH_EVENT, { detail: { url, requestId } })
+      new CustomEvent(ROUTER_PUSH_EVENT, { detail: { url, requestId } }),
     );
     await response;
   },

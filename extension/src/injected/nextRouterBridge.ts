@@ -10,59 +10,6 @@ const getNextRouter = (): NextRouter => {
   return (window as any).next?.router as NextRouter;
 };
 
-const waitForPageSettled = async (
-  idleMs = 200,
-  timeoutMs = 4000
-): Promise<void> => {
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-  });
-
-  await new Promise<void>((resolve) => {
-    const target = document.body ?? document.documentElement;
-    if (!target) {
-      resolve();
-      return;
-    }
-
-    let idleTimer: number | undefined;
-    const settle = () => {
-      if (idleTimer !== undefined) {
-        window.clearTimeout(idleTimer);
-      }
-      idleTimer = window.setTimeout(() => {
-        cleanup();
-        resolve();
-      }, idleMs);
-    };
-
-    const observer = new MutationObserver(() => {
-      settle();
-    });
-    observer.observe(target, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      characterData: true,
-    });
-
-    const timeoutTimer = window.setTimeout(() => {
-      cleanup();
-      resolve();
-    }, timeoutMs);
-
-    const cleanup = () => {
-      observer.disconnect();
-      if (idleTimer !== undefined) {
-        window.clearTimeout(idleTimer);
-      }
-      window.clearTimeout(timeoutTimer);
-    };
-
-    settle();
-  });
-};
-
 window.addEventListener(ROUTER_PUSH_EVENT, async (event: Event) => {
   const detail = (event as CustomEvent).detail as
     | { url?: string; requestId?: string }
@@ -75,11 +22,23 @@ window.addEventListener(ROUTER_PUSH_EVENT, async (event: Event) => {
   if (!router?.push) {
     throw new Error("Next router not available on page.");
   }
+
+  const p = new Promise<void>((resolve) => {
+    const callback = (url: string) => {
+      resolve();
+      getNextRouter().events.off("routeChangeComplete", callback);
+    };
+    getNextRouter().events.on("routeChangeComplete", callback);
+  });
+
+  console.log("[ColesAutomation] Navigating to", detail.url);
   await router.push(detail.url);
-  await waitForPageSettled();
+  console.log("[ColesAutomation] Waiting for page to settle");
+  await p;
+  console.log("[ColesAutomation] Page settled");
   window.dispatchEvent(
     new CustomEvent(ROUTER_PUSH_DONE_EVENT, {
       detail: { url: detail.url, requestId: detail.requestId },
-    })
+    }),
   );
 });

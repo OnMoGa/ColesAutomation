@@ -17,42 +17,57 @@ import { setCartQuantity } from "./commandHandlers/setCartQuantity";
 import { FetchInterceptedMessage } from "./injected/fetchHook";
 import { injectPageScript } from "./scriptInjector";
 
-console.log("[ColesAutomation] Content script loaded");
+type ContentWindow = Window & {
+  __COLES_AUTOMATION_CONTENT_SCRIPT_LOADED__?: boolean;
+};
+const contentWindow = window as ContentWindow;
+const isFirstBootstrap =
+  !contentWindow.__COLES_AUTOMATION_CONTENT_SCRIPT_LOADED__;
 
-injectPageScript("dist/injected/nextRouterBridge.js");
-injectPageScript("dist/injected/fetchHook.js");
-// injectPageScript("dist/injected/xhrHook.js");
+if (!isFirstBootstrap) {
+  console.log("[ColesAutomation] Content script already loaded; skipping");
+} else {
+  contentWindow.__COLES_AUTOMATION_CONTENT_SCRIPT_LOADED__ = true;
+  console.log("[ColesAutomation] Content script loaded");
+
+  injectPageScript("dist/injected/nextRouterBridge.js");
+  injectPageScript("dist/injected/fetchHook.js");
+  // injectPageScript("dist/injected/xhrHook.js");
+}
 
 type ContentResponse = Omit<ClientResponse, "id" | "type" | "command">;
 
-chrome.runtime.onMessage.addListener(
-  (message: ClientRequest, _sender, sendResponse) => {
-    if (!message?.command) {
-      sendResponse({
-        ok: false,
-        error: { code: "NO_COMMAND", message: "Missing command." },
-      } satisfies ContentResponse);
-      return;
-    }
-
-    void (async () => {
-      try {
-        const result = await runCommand(message.command, message.params);
-        sendResponse({ ok: true, result } satisfies ContentResponse);
-      } catch (error) {
+if (isFirstBootstrap) {
+  chrome.runtime.onMessage.addListener(
+    (message: ClientRequest, _sender, sendResponse) => {
+      if (!message?.command) {
         sendResponse({
           ok: false,
-          error: {
-            code: "COMMAND_FAILED",
-            message: error instanceof Error ? error.message : "Unknown error.",
-          },
+          error: { code: "NO_COMMAND", message: "Missing command." },
         } satisfies ContentResponse);
+        return;
       }
-    })();
 
-    return true;
-  },
-);
+      void (async () => {
+        try {
+          const result = await runCommand(message.command, message.params);
+          sendResponse({ ok: true, result } satisfies ContentResponse);
+        } catch (error) {
+          sendResponse({
+            ok: false,
+            error: {
+              code: "COMMAND_FAILED",
+              message:
+                error instanceof Error ? error.message : "Unknown error.",
+            },
+          } satisfies ContentResponse);
+        }
+      })();
+
+      return true;
+    },
+  );
+}
 
 const runCommand = <TCommand extends CommandName>(
   command: TCommand,
@@ -95,19 +110,21 @@ const commandHandlers: {
   },
 };
 
-window.addEventListener("message", (event: MessageEvent) => {
-  if (event.source !== window) return;
-  const data = event.data as any;
-  if (!data || data.__COLES_AUTOMATION__ !== true) return;
-  if (data.kind === "FETCH_INTERCEPTED") {
-    const fetchInterceptedMessage = data as FetchInterceptedMessage;
-    if (
-      fetchInterceptedMessage.url.match(/\/trolley\//) &&
-      fetchInterceptedMessage.method === "GET"
-    ) {
-      const order = fetchInterceptedMessage.responseJson as OrderDetails;
-      updateOrderDetailsCache(order);
-      return;
+if (isFirstBootstrap) {
+  window.addEventListener("message", (event: MessageEvent) => {
+    if (event.source !== window) return;
+    const data = event.data as any;
+    if (!data || data.__COLES_AUTOMATION__ !== true) return;
+    if (data.kind === "FETCH_INTERCEPTED") {
+      const fetchInterceptedMessage = data as FetchInterceptedMessage;
+      if (
+        fetchInterceptedMessage.url.match(/\/trolley\//) &&
+        fetchInterceptedMessage.method === "GET"
+      ) {
+        const order = fetchInterceptedMessage.responseJson as OrderDetails;
+        updateOrderDetailsCache(order);
+        return;
+      }
     }
-  }
-});
+  });
+}

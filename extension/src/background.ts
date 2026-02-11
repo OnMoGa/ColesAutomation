@@ -82,6 +82,31 @@ const getConfig = async (): Promise<StoredConfig> => {
   };
 };
 
+const reinjectContentScripts = async () => {
+  const tabs = await chrome.tabs.query({
+    url: "https://www.coles.com.au/*",
+  });
+  await Promise.all(
+    tabs.map(async (tab) => {
+      if (!tab.id) {
+        return;
+      }
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ["dist/content.js"],
+        });
+        logInfo("Reinjected content script", { tabId: tab.id });
+      } catch (error) {
+        logError("Failed to re-inject content script", {
+          tabId: tab.id,
+          error,
+        });
+      }
+    }),
+  );
+};
+
 const connectSocket = async () => {
   if (socket && socket.readyState === WebSocket.OPEN) {
     return;
@@ -124,11 +149,10 @@ const scheduleReconnect = () => {
   if (reconnectTimer !== null) {
     return;
   }
-  void connectSocket();
-  // reconnectTimer = setTimeout(() => {
-  //   reconnectTimer = null;
-
-  // }, 1500) as unknown as number;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    void connectSocket();
+  }, 1000) as unknown as number;
 };
 
 const getActiveColesTab = async (): Promise<chrome.tabs.Tab | null> => {
@@ -219,6 +243,12 @@ const handleSocketMessage = async (raw: string) => {
 
 chrome.runtime.onInstalled.addListener(() => {
   void chrome.storage.local.set(DEFAULT_CONFIG);
+  void reinjectContentScripts();
 });
 
+chrome.runtime.onStartup.addListener(() => {
+  void reinjectContentScripts();
+});
+
+void reinjectContentScripts();
 void connectSocket();

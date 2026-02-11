@@ -6,7 +6,7 @@
   "action": {
     "default_title": "Coles MCP Bridge"
   },
-  "permissions": ["storage", "tabs", "activeTab"],
+  "permissions": ["storage", "tabs", "activeTab", "scripting"],
   "host_permissions": ["https://www.coles.com.au/*"],
   "background": {
     "service_worker": "dist/background.js",
