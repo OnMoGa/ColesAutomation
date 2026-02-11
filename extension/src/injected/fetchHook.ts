@@ -2,6 +2,7 @@ export interface FetchInterceptedMessage {
   __COLES_AUTOMATION__: true;
   kind: "FETCH_INTERCEPTED";
   url: string;
+  method: string;
   responseJson: unknown;
 }
 
@@ -19,6 +20,7 @@ if (window.fetch) {
             __COLES_AUTOMATION__: true,
             kind: "FETCH_INTERCEPTED",
             url: input instanceof Request ? input.url : input.toString(),
+            method: init?.method ?? "GET",
             responseJson: json,
           };
           window.postMessage(message, "*");

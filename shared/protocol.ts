@@ -55,7 +55,7 @@ export type CommandResult = {
   add_to_trolley: { quantity: number };
   set_trolley_quantity: { quantity: number };
   get_trolley: { items: TrolleyItem[] };
-  remove_from_trolley: { productId: string };
+  remove_from_trolley: { success: boolean };
   clear_trolley: { cleared: boolean };
   review_order: {
     items: TrolleyItem[];

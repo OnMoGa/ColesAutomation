@@ -63,8 +63,8 @@ wss.on("connection", (socket: WebSocket, request: IncomingMessage) => {
           new Error(
             `Error received from extension: ${
               message.error?.message ?? "Unknown extension error."
-            }`
-          )
+            }`,
+          ),
         );
       }
     } catch {
@@ -81,7 +81,7 @@ wss.on("connection", (socket: WebSocket, request: IncomingMessage) => {
 
 const sendCommand = <K extends CommandName>(
   command: K,
-  params: RequestParams[K]
+  params: RequestParams[K],
 ): Promise<CommandResult[K]> => {
   if (!clientSocket || clientSocket.readyState !== WebSocket.OPEN) {
     throw new Error("Error in sendCommand: Extension is not connected.");
@@ -126,7 +126,7 @@ server.registerTool(
     description: "List top-level product categories.",
     inputSchema: z.object({}),
   },
-  async () => toTextContent(await sendCommand("list_categories", {}))
+  async () => toTextContent(await sendCommand("list_categories", {})),
 );
 
 server.registerTool(
@@ -138,7 +138,7 @@ server.registerTool(
     }),
   },
   async ({ categoryName }) =>
-    toTextContent(await sendCommand("list_subcategories", { categoryName }))
+    toTextContent(await sendCommand("list_subcategories", { categoryName })),
 );
 
 server.registerTool(
@@ -159,8 +159,8 @@ server.registerTool(
         subCategoryName,
         limit,
         offset,
-      })
-    )
+      }),
+    ),
 );
 
 server.registerTool(
@@ -175,8 +175,8 @@ server.registerTool(
   },
   async ({ query, limit, offset }) =>
     toTextContent(
-      await sendCommand("search_products", { query, limit, offset })
-    )
+      await sendCommand("search_products", { query, limit, offset }),
+    ),
 );
 
 server.registerTool(
@@ -188,7 +188,7 @@ server.registerTool(
     }),
   },
   async ({ productId }) =>
-    toTextContent(await sendCommand("add_to_trolley", { productId }))
+    toTextContent(await sendCommand("add_to_trolley", { productId })),
 );
 
 server.registerTool(
@@ -203,8 +203,8 @@ server.registerTool(
   },
   async ({ productId, quantity }) =>
     toTextContent(
-      await sendCommand("set_trolley_quantity", { productId, quantity })
-    )
+      await sendCommand("set_trolley_quantity", { productId, quantity }),
+    ),
 );
 
 server.registerTool(
@@ -213,7 +213,7 @@ server.registerTool(
     description: "Get the current trolley contents.",
     inputSchema: z.object({}),
   },
-  async () => toTextContent(await sendCommand("get_trolley", {}))
+  async () => toTextContent(await sendCommand("get_trolley", {})),
 );
 
 server.registerTool(
@@ -225,7 +225,7 @@ server.registerTool(
     }),
   },
   async ({ productId }) =>
-    toTextContent(await sendCommand("remove_from_trolley", { productId }))
+    toTextContent(await sendCommand("remove_from_trolley", { productId })),
 );
 
 server.registerTool(
@@ -234,7 +234,7 @@ server.registerTool(
     description: "Remove all items from the trolley.",
     inputSchema: z.object({}),
   },
-  async () => toTextContent(await sendCommand("clear_trolley", {}))
+  async () => toTextContent(await sendCommand("clear_trolley", {})),
 );
 
 server.registerTool(
@@ -243,7 +243,7 @@ server.registerTool(
     description: "Return a summary of the trolley without placing an order.",
     inputSchema: z.object({}),
   },
-  async () => toTextContent(await sendCommand("review_order", {}))
+  async () => toTextContent(await sendCommand("review_order", {})),
 );
 
 const transport = new StdioServerTransport();

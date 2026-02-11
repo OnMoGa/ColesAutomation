@@ -124,10 +124,11 @@ const scheduleReconnect = () => {
   if (reconnectTimer !== null) {
     return;
   }
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
-    void connectSocket();
-  }, 1500) as unknown as number;
+  void connectSocket();
+  // reconnectTimer = setTimeout(() => {
+  //   reconnectTimer = null;
+
+  // }, 1500) as unknown as number;
 };
 
 const getActiveColesTab = async (): Promise<chrome.tabs.Tab | null> => {
@@ -146,7 +147,7 @@ const getActiveColesTab = async (): Promise<chrome.tabs.Tab | null> => {
 
 const forwardToContentScript = async (
   command: CommandName,
-  params: ClientRequest["params"]
+  params: ClientRequest["params"],
 ) => {
   const tab = await getActiveColesTab();
   if (!tab?.id) {
@@ -187,7 +188,7 @@ const handleSocketMessage = async (raw: string) => {
   } catch (error) {
     logError(
       "Error in handleSocketMessage: Invalid JSON from MCP server",
-      error
+      error,
     );
     return;
   }
@@ -199,7 +200,7 @@ const handleSocketMessage = async (raw: string) => {
 
   const responsePayload = await forwardToContentScript(
     message.command,
-    message.params
+    message.params,
   );
 
   const response: ClientResponse = {

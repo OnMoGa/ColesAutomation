@@ -12,6 +12,7 @@ import { getCart } from "./commandHandlers/getCart";
 import { getCategories } from "./commandHandlers/getCategories";
 import { getSubcategories } from "./commandHandlers/getSubcategories";
 import { getSubcategoryProducts } from "./commandHandlers/getSubcategoryProducts";
+import { removeProductFromCart } from "./commandHandlers/removeProductFromCart";
 import { setCartQuantity } from "./commandHandlers/setCartQuantity";
 import { FetchInterceptedMessage } from "./injected/fetchHook";
 import { injectPageScript } from "./scriptInjector";
@@ -50,12 +51,12 @@ chrome.runtime.onMessage.addListener(
     })();
 
     return true;
-  }
+  },
 );
 
 const runCommand = <TCommand extends CommandName>(
   command: TCommand,
-  params: RequestParams[TCommand]
+  params: RequestParams[TCommand],
 ): Promise<CommandResult[TCommand]> => {
   return commandHandlers[command](params);
 };
@@ -68,7 +69,7 @@ const commandHandlers: {
   }),
   list_subcategories: async (p) => ({
     subcategories: (await getSubcategories(p.categoryName)).map(
-      (subcategory) => subcategory.name
+      (subcategory) => subcategory.name,
     ),
   }),
   list_subcategory_products: async (p) => ({
@@ -83,9 +84,9 @@ const commandHandlers: {
   get_trolley: async () => {
     return { items: await getCart() };
   },
-  remove_from_trolley: async (p) => {
-    throw new Error("Not implemented.");
-  },
+  remove_from_trolley: async (p) => ({
+    success: await removeProductFromCart(p.productId),
+  }),
   clear_trolley: async () => {
     throw new Error("Not implemented.");
   },
@@ -100,7 +101,10 @@ window.addEventListener("message", (event: MessageEvent) => {
   if (!data || data.__COLES_AUTOMATION__ !== true) return;
   if (data.kind === "FETCH_INTERCEPTED") {
     const fetchInterceptedMessage = data as FetchInterceptedMessage;
-    if (fetchInterceptedMessage.url.match(/\/trolley\//)) {
+    if (
+      fetchInterceptedMessage.url.match(/\/trolley\//) &&
+      fetchInterceptedMessage.method === "GET"
+    ) {
       const order = fetchInterceptedMessage.responseJson as OrderDetails;
       updateOrderDetailsCache(order);
       return;
