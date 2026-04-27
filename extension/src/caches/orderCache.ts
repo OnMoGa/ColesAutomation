@@ -1,11 +1,11 @@
-import { OrderDetails } from "../colesTypes";
+import { CurrentOrderDetails } from "../colesTypes";
 
-let currentOrder: OrderDetails | undefined = undefined;
+let currentOrder: CurrentOrderDetails | undefined = undefined;
 
-export const updateOrderDetailsCache = (order: OrderDetails) => {
+export const updateOrderDetailsCache = (order: CurrentOrderDetails) => {
   currentOrder = order;
 };
 
-export const getOrderDetailsCache = (): OrderDetails | undefined => {
+export const getOrderDetailsCache = (): CurrentOrderDetails | undefined => {
   return currentOrder;
 };

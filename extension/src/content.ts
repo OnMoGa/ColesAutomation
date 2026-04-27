@@ -5,8 +5,6 @@ import {
   CommandResult,
   RequestParams,
 } from "../../shared/protocol";
-import { updateOrderDetailsCache } from "./caches/orderCache";
-import { OrderDetails } from "./colesTypes";
 import { addProductToCart } from "./commandHandlers/addProductToCart";
 import { getCart } from "./commandHandlers/getCart";
 import { getCategories } from "./commandHandlers/getCategories";
@@ -15,6 +13,14 @@ import { getSubcategoryProducts } from "./commandHandlers/getSubcategoryProducts
 import { removeProductFromCart } from "./commandHandlers/removeProductFromCart";
 import { setCartQuantity } from "./commandHandlers/setCartQuantity";
 import { FetchInterceptedMessage } from "./injected/fetchHook";
+import {
+  handleMessageForCurrentOrderDetails,
+  isMessageForCurrentOrderDetails,
+} from "./interceptedMessageHandlers/currentOrderDetails";
+import {
+  handleMessageForPreviousOrderDetails,
+  isMessageForPreviousOrderDetails,
+} from "./interceptedMessageHandlers/previousOrderDetails";
 import { injectPageScript } from "./scriptInjector";
 
 type ContentWindow = Window & {
@@ -117,12 +123,12 @@ if (isFirstBootstrap) {
     if (!data || data.__COLES_AUTOMATION__ !== true) return;
     if (data.kind === "FETCH_INTERCEPTED") {
       const fetchInterceptedMessage = data as FetchInterceptedMessage;
-      if (
-        fetchInterceptedMessage.url.match(/\/trolley\//) &&
-        fetchInterceptedMessage.method === "GET"
-      ) {
-        const order = fetchInterceptedMessage.responseJson as OrderDetails;
-        updateOrderDetailsCache(order);
+      if (isMessageForCurrentOrderDetails(fetchInterceptedMessage)) {
+        handleMessageForCurrentOrderDetails(fetchInterceptedMessage);
+        return;
+      }
+      if (isMessageForPreviousOrderDetails(fetchInterceptedMessage)) {
+        handleMessageForPreviousOrderDetails(fetchInterceptedMessage);
         return;
       }
     }

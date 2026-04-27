@@ -1,8 +1,8 @@
-export interface OrderDetails {
+export interface CurrentOrderDetails {
   orderId: string;
   orderModifiedFlag: boolean;
   orderModificationCount: number;
-  items: OrderItem[];
+  items: CurrentOrderItem[];
   totalPrice: number;
   totalQuantity: number;
   totalSaving: number;
@@ -17,7 +17,7 @@ export interface OrderDetails {
   // unavailableItems: any[];
 }
 
-export interface OrderItem {
+export interface CurrentOrderItem {
   orderItemId: string;
   productId: number;
   quantity: number;
@@ -25,10 +25,10 @@ export interface OrderItem {
   itemTotal: number;
   unitPrice: number;
   itemSubstitutionSelected: string;
-  product: OrderItemProduct;
+  product: CurrentOrderItemProduct;
 }
 
-export interface OrderItemProduct {
+export interface CurrentOrderItemProduct {
   name: string;
   brand: string;
   description: string;
@@ -75,4 +75,24 @@ export interface Unit {
   ofMeasureType: string;
   isWeighted: boolean;
   isIncremental: boolean;
+}
+
+export interface PreviousOrderDetails {
+  items: PreviousOrderProduct[];
+}
+
+export interface PreviousOrderProduct {
+  id: number;
+  name: string;
+  brand: string;
+  description: string;
+  size: string;
+  orderItem: PreviousOrderItem;
+}
+
+export interface PreviousOrderItem {
+  orderItemId: string;
+  quantity: number;
+  unitPrice: number;
+  itemTotalPrice: number;
 }

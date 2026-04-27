@@ -8,8 +8,11 @@
   },
   "permissions": ["storage", "tabs", "activeTab", "scripting"],
   "host_permissions": ["https://www.coles.com.au/*"],
+  "externally_connectable": {
+    "matches": ["https://www.coles.com.au/*"]
+  },
   "background": {
-    "service_worker": "dist/background.js",
+    "service_worker": "dist/background/background.js",
     "type": "module"
   },
   "content_scripts": [

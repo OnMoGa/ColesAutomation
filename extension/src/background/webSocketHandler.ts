@@ -3,23 +3,15 @@ import {
   ClientResponse,
   CommandName,
   ResponseError,
-} from "../../shared/protocol";
-
-console.log("[ColesAutomation] Background script loaded");
-
-type StoredConfig = {
-  port: number;
-  token: string;
-};
-
-const DEFAULT_CONFIG: StoredConfig = {
-  port: 7357,
-  token: "coles-dev-token",
-};
+} from "../../../shared/protocol";
+import { logError, logInfo } from "../logging";
+import { getActiveColesTab } from "./background";
+import { getConfig } from "./config";
 
 let socket: WebSocket | null = null;
 let connecting = false;
 let reconnectTimer: number | null = null;
+
 type ConnectionStatus = "connected" | "disconnected" | "connecting";
 
 let currentStatus: ConnectionStatus | null = null;
@@ -30,84 +22,7 @@ const STATUS_COLORS: Record<ConnectionStatus, string> = {
   connecting: "#f59e0b",
 };
 
-const logInfo = (message: string, meta?: unknown) => {
-  if (meta) {
-    console.info(`[ColesAutomation] ${message}`, meta);
-  } else {
-    console.info(`[ColesAutomation] ${message}`);
-  }
-};
-
-const logError = (message: string, meta?: unknown) => {
-  if (meta) {
-    console.error(`[ColesAutomation] ${message}`, meta);
-  } else {
-    console.error(`[ColesAutomation] ${message}`);
-  }
-};
-
-const drawStatusIcon = (color: string, size: number) => {
-  const canvas = new OffscreenCanvas(size, size);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    throw new Error("Failed to create canvas context.");
-  }
-  ctx.clearRect(0, 0, size, size);
-  ctx.beginPath();
-  ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-  return ctx.getImageData(0, 0, size, size);
-};
-
-const updateStatusIcon = (status: ConnectionStatus) => {
-  if (currentStatus === status) {
-    return;
-  }
-  currentStatus = status;
-  const color = STATUS_COLORS[status];
-  const imageData = {
-    16: drawStatusIcon(color, 16),
-    32: drawStatusIcon(color, 32),
-  };
-  chrome.action.setIcon({ imageData });
-};
-
-const getConfig = async (): Promise<StoredConfig> => {
-  const result = await chrome.storage.local.get(DEFAULT_CONFIG);
-  return {
-    port: typeof result.port === "number" ? result.port : DEFAULT_CONFIG.port,
-    token:
-      typeof result.token === "string" ? result.token : DEFAULT_CONFIG.token,
-  };
-};
-
-const reinjectContentScripts = async () => {
-  const tabs = await chrome.tabs.query({
-    url: "https://www.coles.com.au/*",
-  });
-  await Promise.all(
-    tabs.map(async (tab) => {
-      if (!tab.id) {
-        return;
-      }
-      try {
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ["dist/content.js"],
-        });
-        logInfo("Reinjected content script", { tabId: tab.id });
-      } catch (error) {
-        logError("Failed to re-inject content script", {
-          tabId: tab.id,
-          error,
-        });
-      }
-    }),
-  );
-};
-
-const connectSocket = async () => {
+export const connectSocket = async () => {
   if (socket && socket.readyState === WebSocket.OPEN) {
     return;
   }
@@ -153,20 +68,6 @@ const scheduleReconnect = () => {
     reconnectTimer = null;
     void connectSocket();
   }, 1000) as unknown as number;
-};
-
-const getActiveColesTab = async (): Promise<chrome.tabs.Tab | null> => {
-  const [activeTab] = await chrome.tabs.query({
-    active: true,
-    lastFocusedWindow: true,
-  });
-  if (activeTab?.url && activeTab.url.includes("https://www.coles.com.au/")) {
-    return activeTab;
-  }
-  const tabs = await chrome.tabs.query({
-    url: "https://www.coles.com.au/*",
-  });
-  return tabs.length > 0 ? tabs[0] : null;
 };
 
 const forwardToContentScript = async (
@@ -241,14 +142,29 @@ const handleSocketMessage = async (raw: string) => {
   }
 };
 
-chrome.runtime.onInstalled.addListener(() => {
-  void chrome.storage.local.set(DEFAULT_CONFIG);
-  void reinjectContentScripts();
-});
+const updateStatusIcon = (status: ConnectionStatus) => {
+  if (currentStatus === status) {
+    return;
+  }
+  currentStatus = status;
+  const color = STATUS_COLORS[status];
+  const imageData = {
+    16: drawStatusIcon(color, 16),
+    32: drawStatusIcon(color, 32),
+  };
+  chrome.action.setIcon({ imageData });
+};
 
-chrome.runtime.onStartup.addListener(() => {
-  void reinjectContentScripts();
-});
-
-void reinjectContentScripts();
-void connectSocket();
+const drawStatusIcon = (color: string, size: number) => {
+  const canvas = new OffscreenCanvas(size, size);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Failed to create canvas context.");
+  }
+  ctx.clearRect(0, 0, size, size);
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  return ctx.getImageData(0, 0, size, size);
+};

@@ -49,4 +49,12 @@ export const nextRouter: NextRouter = {
     );
     await response;
   },
+  events: {
+    on: (event: string, callback: (url: string) => void) => {
+      throw new Error("Not implemented");
+    },
+    off: (event: string, callback: (url: string) => void) => {
+      throw new Error("Not implemented");
+    },
+  },
 };
