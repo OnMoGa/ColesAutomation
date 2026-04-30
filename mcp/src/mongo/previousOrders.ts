@@ -37,14 +37,14 @@ export const upsertPreviousOrderSummaries = async (orders: PreviousOrderSummary[
   await db.collection<PreviousOrder>(PREVIOUS_ORDERS_COLLECTION).bulkWrite(updates);
 };
 
-export type PreviousOrderDetails = Pick<PreviousOrder, "_id" | "items">;
+export type PreviousOrderDetails = Pick<PreviousOrder, "_id" | "items" | "orderAttributes" | "orderPlacementTime">;
 
 export const getAllPreviousOrdersDetails = async () => {
   const db = await getMongoDb();
   return await db
     .collection<PreviousOrder>(PREVIOUS_ORDERS_COLLECTION)
     .find()
-    .project<PreviousOrderDetails>({ _id: 1, items: 1 })
+    .project<PreviousOrderDetails>({ _id: 1, items: 1, orderAttributes: 1, orderPlacementTime: 1 })
     .toArray();
 };
 

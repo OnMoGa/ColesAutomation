@@ -66,6 +66,15 @@ export type OrderItem = {
   quantity: number;
 };
 
+export type ProductDetails = {
+  productId: string;
+  name: string;
+  brand: string;
+  description: string;
+  size: string;
+  unitPrice: number;
+};
+
 export type CommandResult = {
   open_home: { url: string };
   list_categories: { categories: string[] };
@@ -86,7 +95,7 @@ export type CommandResult = {
     warnings?: string[];
   };
   get_previous_orders: { orders: PreviousOrderSummary[] };
-  get_order_details: { details: OrderDetails };
+  get_order_details: { orderDetails: OrderDetails; productInfo: ProductDetails[] };
 };
 
 export type ClientRequest<K extends CommandName = CommandName> = {

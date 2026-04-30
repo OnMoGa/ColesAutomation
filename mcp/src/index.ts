@@ -6,7 +6,8 @@ import { MongoClient } from "mongodb";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { z } from "zod";
 import { ClientRequest, ClientResponse, CommandName, CommandResult, RequestParams } from "../../shared/protocol.js";
-import { getAllPreviousOrdersDetails, upsertOrderItems, upsertPreviousOrderSummaries } from "./previousOrders.js";
+import { getAllPreviousOrdersDetails, upsertOrderItems, upsertPreviousOrderSummaries } from "./mongo/previousOrders.js";
+import { getProductInfo, Product, upsertProductInfo } from "./mongo/products.js";
 
 const WS_PORT = Number(process.env.COLES_WS_PORT ?? 7357);
 const WS_TOKEN = process.env.COLES_WS_TOKEN ?? "coles-dev-token";
@@ -245,14 +246,50 @@ server.registerTool(
 
     var previousOrderDetails = await getAllPreviousOrdersDetails();
     var ordersMissingItemDetails = previousOrderDetails.filter((d) => !d.items || d.items.length == 0);
+    // for (const orderDetails of previousOrderDetails) {
     for (const orderDetails of ordersMissingItemDetails) {
       var newOrderDetails = await sendCommand("get_order_details", { orderId: orderDetails._id });
-      var updatedOrderDetails = await upsertOrderItems(orderDetails._id, newOrderDetails.details.items);
+      var updatedOrderDetails = await upsertOrderItems(orderDetails._id, newOrderDetails.orderDetails.items);
+      await upsertProductInfo(
+        newOrderDetails.productInfo.map((p) => {
+          var id = p.productId;
+          delete (p as any).productId;
+          return {
+            _id: id,
+            ...p,
+          };
+        }),
+      );
       if (updatedOrderDetails) {
         orderDetails.items = updatedOrderDetails.items;
       }
     }
-    return toTextContent(previousOrderDetails);
+
+    var productIds = previousOrderDetails.flatMap((order) => order.items?.map((item) => item.productId) ?? []);
+
+    var productInfoMap = new Map<string, Product>(
+      (await getProductInfo(productIds)).map((product) => [product._id, product]),
+    );
+    var ordersWithResolvedItems = previousOrderDetails.map((order) => {
+      return {
+        _id: order._id,
+        totalPrice: order.orderAttributes.orderTotalPrice,
+        orderPlacementTime: order.orderPlacementTime,
+        items: order.items?.map((item) => {
+          var product = productInfoMap.get(item.productId);
+          return {
+            name: product?.name,
+            brand: product?.brand,
+            description: product?.description,
+            size: product?.size,
+            unitPrice: product?.unitPrice,
+            quantity: item.quantity,
+          };
+        }),
+      };
+    });
+
+    return toTextContent(ordersWithResolvedItems);
   },
 );
 

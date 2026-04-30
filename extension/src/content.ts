@@ -109,12 +109,20 @@ const commandHandlers: {
   get_order_details: async (p) => {
     var orderDetails = await getOrderDetails(p.orderId);
     return {
-      details: {
+      orderDetails: {
         items: orderDetails.items.map((item) => ({
-          productId: item.id,
+          productId: item.id.toString(),
           quantity: item.orderItem.quantity,
         })),
       },
+      productInfo: orderDetails.items.map((item) => ({
+        productId: item.id.toString(),
+        name: item.name,
+        brand: item.brand,
+        description: item.description,
+        size: item.size,
+        unitPrice: item.orderItem.unitPrice,
+      })),
     };
   },
 };

@@ -44,9 +44,11 @@ interface OrderItemsQueryResult {
 }
 
 interface OrderItem {
-  id: string;
+  id: number;
   name: string;
   brand: string;
+  description: string;
+  size: string;
   orderItem: {
     quantity: number;
     unitPrice: number;
