@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/background/background.ts src/content.ts src/injected/nextRouterBridge.ts src/injected/fetchHook.ts src/injected/xhrHook.ts --bundle --outdir=dist --format=esm --target=es2020 --sourcemap"
+    "build": "esbuild src/background/background.ts src/content.ts src/injected/nextRouterBridge.ts src/injected/fetchHook.ts src/injected/xhrHook.ts --bundle --outdir=dist --format=esm --target=es2020 --sourcemap=inline",
+    "build:watch": "esbuild src/background/background.ts src/content.ts src/injected/nextRouterBridge.ts src/injected/fetchHook.ts src/injected/xhrHook.ts --bundle --outdir=dist --format=esm --target=es2020 --sourcemap=inline --watch"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.262",

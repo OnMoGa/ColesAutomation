@@ -1,13 +1,9 @@
-import {
-  ClientRequest,
-  ClientResponse,
-  CommandName,
-  CommandResult,
-  RequestParams,
-} from "../../shared/protocol";
+import { ClientRequest, ClientResponse, CommandName, CommandResult, RequestParams } from "../../shared/protocol";
 import { addProductToCart } from "./commandHandlers/addProductToCart";
 import { getCart } from "./commandHandlers/getCart";
 import { getCategories } from "./commandHandlers/getCategories";
+import { getOrderDetails } from "./commandHandlers/getOrderDetails";
+import { getPreviousOrders } from "./commandHandlers/getPreviousOrders";
 import { getSubcategories } from "./commandHandlers/getSubcategories";
 import { getSubcategoryProducts } from "./commandHandlers/getSubcategoryProducts";
 import { removeProductFromCart } from "./commandHandlers/removeProductFromCart";
@@ -27,8 +23,7 @@ type ContentWindow = Window & {
   __COLES_AUTOMATION_CONTENT_SCRIPT_LOADED__?: boolean;
 };
 const contentWindow = window as ContentWindow;
-const isFirstBootstrap =
-  !contentWindow.__COLES_AUTOMATION_CONTENT_SCRIPT_LOADED__;
+const isFirstBootstrap = !contentWindow.__COLES_AUTOMATION_CONTENT_SCRIPT_LOADED__;
 
 if (!isFirstBootstrap) {
   console.log("[ColesAutomation] Content script already loaded; skipping");
@@ -44,35 +39,32 @@ if (!isFirstBootstrap) {
 type ContentResponse = Omit<ClientResponse, "id" | "type" | "command">;
 
 if (isFirstBootstrap) {
-  chrome.runtime.onMessage.addListener(
-    (message: ClientRequest, _sender, sendResponse) => {
-      if (!message?.command) {
+  chrome.runtime.onMessage.addListener((message: ClientRequest, _sender, sendResponse) => {
+    if (!message?.command) {
+      sendResponse({
+        ok: false,
+        error: { code: "NO_COMMAND", message: "Missing command." },
+      } satisfies ContentResponse);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const result = await runCommand(message.command, message.params);
+        sendResponse({ ok: true, result } satisfies ContentResponse);
+      } catch (error) {
         sendResponse({
           ok: false,
-          error: { code: "NO_COMMAND", message: "Missing command." },
+          error: {
+            code: "COMMAND_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error.",
+          },
         } satisfies ContentResponse);
-        return;
       }
+    })();
 
-      void (async () => {
-        try {
-          const result = await runCommand(message.command, message.params);
-          sendResponse({ ok: true, result } satisfies ContentResponse);
-        } catch (error) {
-          sendResponse({
-            ok: false,
-            error: {
-              code: "COMMAND_FAILED",
-              message:
-                error instanceof Error ? error.message : "Unknown error.",
-            },
-          } satisfies ContentResponse);
-        }
-      })();
-
-      return true;
-    },
-  );
+    return true;
+  });
 }
 
 const runCommand = <TCommand extends CommandName>(
@@ -89,9 +81,7 @@ const commandHandlers: {
     categories: (await getCategories()).map((category) => category.name),
   }),
   list_subcategories: async (p) => ({
-    subcategories: (await getSubcategories(p.categoryName)).map(
-      (subcategory) => subcategory.name,
-    ),
+    subcategories: (await getSubcategories(p.categoryName)).map((subcategory) => subcategory.name),
   }),
   list_subcategory_products: async (p) => ({
     products: await getSubcategoryProducts(p.categoryName, p.subCategoryName),
@@ -100,8 +90,7 @@ const commandHandlers: {
     throw new Error("Not implemented.");
   },
   add_to_trolley: async (p) => await addProductToCart(p.productId),
-  set_trolley_quantity: async (p) =>
-    await setCartQuantity(p.productId, p.quantity),
+  set_trolley_quantity: async (p) => await setCartQuantity(p.productId, p.quantity),
   get_trolley: async () => {
     return { items: await getCart() };
   },
@@ -113,6 +102,20 @@ const commandHandlers: {
   },
   review_order: async () => {
     throw new Error("Not implemented.");
+  },
+  get_previous_orders: async () => {
+    return { orders: await getPreviousOrders() };
+  },
+  get_order_details: async (p) => {
+    var orderDetails = await getOrderDetails(p.orderId);
+    return {
+      details: {
+        items: orderDetails.items.map((item) => ({
+          productId: item.id,
+          quantity: item.orderItem.quantity,
+        })),
+      },
+    };
   },
 };
 

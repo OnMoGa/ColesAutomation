@@ -8,7 +8,9 @@ export type CommandName =
   | "get_trolley"
   | "remove_from_trolley"
   | "clear_trolley"
-  | "review_order";
+  | "review_order"
+  | "get_previous_orders"
+  | "get_order_details";
 
 export type RequestParams = {
   list_categories: Record<string, never>;
@@ -26,6 +28,8 @@ export type RequestParams = {
   remove_from_trolley: { productId: string };
   clear_trolley: Record<string, never>;
   review_order: Record<string, never>;
+  get_previous_orders: Record<string, never>;
+  get_order_details: { orderId: string };
 };
 
 export type Product = {
@@ -42,6 +46,24 @@ export type TrolleyItem = {
   price: number;
   totalPrice: number;
   productUrl?: string;
+};
+
+export type PreviousOrderSummary = {
+  orderId: string;
+  orderStatus: string;
+  orderPlacementTime: string;
+  orderAttributes: {
+    orderTotalPrice: number;
+  };
+};
+
+export type OrderDetails = {
+  items: OrderItem[];
+};
+
+export type OrderItem = {
+  productId: string;
+  quantity: number;
 };
 
 export type CommandResult = {
@@ -63,6 +85,8 @@ export type CommandResult = {
     checkoutEnabled?: boolean;
     warnings?: string[];
   };
+  get_previous_orders: { orders: PreviousOrderSummary[] };
+  get_order_details: { details: OrderDetails };
 };
 
 export type ClientRequest<K extends CommandName = CommandName> = {

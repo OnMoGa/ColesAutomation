@@ -96,3 +96,19 @@ export interface PreviousOrderItem {
   unitPrice: number;
   itemTotalPrice: number;
 }
+
+export interface PreviousOrders {
+  noOfOrders: number;
+  totalNoOfOrders: number;
+  lastDeliveredOrderDate: string;
+  orders: PreviousOrder[];
+}
+
+export interface PreviousOrder {
+  orderId: string;
+  orderStatus: string;
+  orderPlacementTime: string;
+  orderAttributes: {
+    orderTotalPrice: number;
+  };
+}

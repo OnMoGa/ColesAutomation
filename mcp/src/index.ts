@@ -2,15 +2,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { randomUUID } from "crypto";
 import type { IncomingMessage } from "http";
+import { MongoClient } from "mongodb";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { z } from "zod";
-import {
-  ClientRequest,
-  ClientResponse,
-  CommandName,
-  CommandResult,
-  RequestParams,
-} from "../../shared/protocol.js";
+import { ClientRequest, ClientResponse, CommandName, CommandResult, RequestParams } from "../../shared/protocol.js";
+import { getAllPreviousOrdersDetails, upsertOrderItems, upsertPreviousOrderSummaries } from "./previousOrders.js";
 
 const WS_PORT = Number(process.env.COLES_WS_PORT ?? 7357);
 const WS_TOKEN = process.env.COLES_WS_TOKEN ?? "coles-dev-token";
@@ -60,11 +56,7 @@ wss.on("connection", (socket: WebSocket, request: IncomingMessage) => {
         entry.resolve(message.result as CommandResult[CommandName]);
       } else {
         entry.reject(
-          new Error(
-            `Error received from extension: ${
-              message.error?.message ?? "Unknown extension error."
-            }`,
-          ),
+          new Error(`Error received from extension: ${message.error?.message ?? "Unknown extension error."}`),
         );
       }
     } catch {
@@ -79,10 +71,7 @@ wss.on("connection", (socket: WebSocket, request: IncomingMessage) => {
   });
 });
 
-const sendCommand = <K extends CommandName>(
-  command: K,
-  params: RequestParams[K],
-): Promise<CommandResult[K]> => {
+const sendCommand = <K extends CommandName>(command: K, params: RequestParams[K]): Promise<CommandResult[K]> => {
   if (!clientSocket || clientSocket.readyState !== WebSocket.OPEN) {
     throw new Error("Error in sendCommand: Extension is not connected.");
   }
@@ -137,8 +126,7 @@ server.registerTool(
       categoryName: z.string().min(1),
     }),
   },
-  async ({ categoryName }) =>
-    toTextContent(await sendCommand("list_subcategories", { categoryName })),
+  async ({ categoryName }) => toTextContent(await sendCommand("list_subcategories", { categoryName })),
 );
 
 server.registerTool(
@@ -173,10 +161,7 @@ server.registerTool(
       offset: z.number().int().min(0).optional(),
     }),
   },
-  async ({ query, limit, offset }) =>
-    toTextContent(
-      await sendCommand("search_products", { query, limit, offset }),
-    ),
+  async ({ query, limit, offset }) => toTextContent(await sendCommand("search_products", { query, limit, offset })),
 );
 
 server.registerTool(
@@ -187,24 +172,19 @@ server.registerTool(
       productId: z.string().min(1),
     }),
   },
-  async ({ productId }) =>
-    toTextContent(await sendCommand("add_to_trolley", { productId })),
+  async ({ productId }) => toTextContent(await sendCommand("add_to_trolley", { productId })),
 );
 
 server.registerTool(
   "coles_set_trolley_quantity",
   {
-    description:
-      "Set the quantity of a product in the trolley by its productId.",
+    description: "Set the quantity of a product in the trolley by its productId.",
     inputSchema: z.object({
       productId: z.string().min(1),
       quantity: z.number().int().min(0),
     }),
   },
-  async ({ productId, quantity }) =>
-    toTextContent(
-      await sendCommand("set_trolley_quantity", { productId, quantity }),
-    ),
+  async ({ productId, quantity }) => toTextContent(await sendCommand("set_trolley_quantity", { productId, quantity })),
 );
 
 server.registerTool(
@@ -224,8 +204,7 @@ server.registerTool(
       productId: z.string().min(1),
     }),
   },
-  async ({ productId }) =>
-    toTextContent(await sendCommand("remove_from_trolley", { productId })),
+  async ({ productId }) => toTextContent(await sendCommand("remove_from_trolley", { productId })),
 );
 
 server.registerTool(
@@ -244,6 +223,37 @@ server.registerTool(
     inputSchema: z.object({}),
   },
   async () => toTextContent(await sendCommand("review_order", {})),
+);
+
+server.registerTool(
+  "coles_get_previous_orders",
+  {
+    description: "Return a list of previous orders.",
+    inputSchema: z.object({}),
+  },
+  async () => {
+    const previousOrders = await sendCommand("get_previous_orders", {});
+    const docs = previousOrders.orders.map((order) => ({
+      _id: order.orderId,
+      orderStatus: order.orderStatus,
+      orderPlacementTime: order.orderPlacementTime,
+      orderAttributes: {
+        orderTotalPrice: order.orderAttributes.orderTotalPrice,
+      },
+    }));
+    await upsertPreviousOrderSummaries(docs);
+
+    var previousOrderDetails = await getAllPreviousOrdersDetails();
+    var ordersMissingItemDetails = previousOrderDetails.filter((d) => !d.items || d.items.length == 0);
+    for (const orderDetails of ordersMissingItemDetails) {
+      var newOrderDetails = await sendCommand("get_order_details", { orderId: orderDetails._id });
+      var updatedOrderDetails = await upsertOrderItems(orderDetails._id, newOrderDetails.details.items);
+      if (updatedOrderDetails) {
+        orderDetails.items = updatedOrderDetails.items;
+      }
+    }
+    return toTextContent(previousOrderDetails);
+  },
 );
 
 const transport = new StdioServerTransport();

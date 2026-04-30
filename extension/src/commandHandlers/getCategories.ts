@@ -1,4 +1,3 @@
-import { Product } from "../../../shared/protocol";
 import { COLES_ORIGIN, navigateTo } from "../colesDom";
 import { Subcategory } from "./getSubcategories";
 
@@ -26,18 +25,10 @@ export const getCategories = async (): Promise<Category[]> => {
 const findNavCategories = (): HTMLAnchorElement[] => {
   const navs = Array.from(document.querySelectorAll("nav"));
   for (const nav of navs) {
-    const links = Array.from(
-      nav.querySelectorAll<HTMLAnchorElement>(
-        'a[href^="/browse"], a[href*="/browse/"]'
-      )
-    );
+    const links = Array.from(nav.querySelectorAll<HTMLAnchorElement>('a[href^="/browse"], a[href*="/browse/"]'));
     if (links.length >= 8) {
       return links;
     }
   }
-  return Array.from(
-    document.querySelectorAll<HTMLAnchorElement>(
-      'a[href^="/browse"], a[href*="/browse/"]'
-    )
-  );
+  return Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="/browse"], a[href*="/browse/"]'));
 };
