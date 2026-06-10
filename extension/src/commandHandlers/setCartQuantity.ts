@@ -1,7 +1,8 @@
-import { navigateTo, sleep } from "../colesDom";
+import { COLES_ORIGIN, navigateTo, sleep } from "../colesDom";
 
-export const setCartQuantity = async (productUrl: string, desiredQuantity: number) => {
-  await navigateTo(productUrl);
+export const setCartQuantity = async (productId: string, desiredQuantity: number) => {
+  const url = new URL(`${COLES_ORIGIN}/product/${productId}`);
+  await navigateTo(url.toString());
   const buyContainer = document.querySelector<HTMLDivElement>('[data-testid="product-buy"]');
   if (!buyContainer) {
     throw new Error("Buy container not found.");

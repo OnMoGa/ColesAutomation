@@ -87,15 +87,15 @@ const commandHandlers: {
   search_products: async (p) => {
     throw new Error("Not implemented.");
   },
-  add_to_trolley: async (p) => await addProductToCart(p.productId),
-  set_trolley_quantity: async (p) => await setCartQuantity(p.productId, p.quantity),
-  get_trolley: async () => {
+  add_to_cart: async (p) => await addProductToCart(p.productId),
+  set_cart_quantity: async (p) => await setCartQuantity(p.productId, p.quantity),
+  get_cart: async () => {
     return { items: await getCart() };
   },
-  remove_from_trolley: async (p) => ({
+  remove_from_cart: async (p) => ({
     success: await removeProductFromCart(p.productId),
   }),
-  clear_trolley: async () => {
+  clear_cart: async () => {
     throw new Error("Not implemented.");
   },
   review_order: async () => {

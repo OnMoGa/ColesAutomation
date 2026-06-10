@@ -3,11 +3,11 @@ export type CommandName =
   // | "list_subcategories"
   | "list_category_products"
   | "search_products"
-  | "add_to_trolley"
-  | "set_trolley_quantity"
-  | "get_trolley"
-  | "remove_from_trolley"
-  | "clear_trolley"
+  | "add_to_cart"
+  | "set_cart_quantity"
+  | "get_cart"
+  | "remove_from_cart"
+  | "clear_cart"
   | "review_order"
   | "get_previous_orders"
   | "get_order_details";
@@ -20,11 +20,11 @@ export type RequestParams = {
     page?: number;
   };
   search_products: { query: string; limit?: number; offset?: number };
-  add_to_trolley: { productId: string };
-  set_trolley_quantity: { productId: string; quantity: number };
-  get_trolley: Record<string, never>;
-  remove_from_trolley: { productId: string };
-  clear_trolley: Record<string, never>;
+  add_to_cart: { productId: string };
+  set_cart_quantity: { productId: string; quantity: number };
+  get_cart: Record<string, never>;
+  remove_from_cart: { productId: string };
+  clear_cart: Record<string, never>;
   review_order: Record<string, never>;
   get_previous_orders: Record<string, never>;
   get_order_details: { orderId: string };
@@ -95,11 +95,11 @@ export type CommandResult = {
     pageSize: number;
   };
   search_products: { query: string; products: Product[]; total?: number };
-  add_to_trolley: { quantity: number };
-  set_trolley_quantity: { quantity: number };
-  get_trolley: { items: TrolleyItem[] };
-  remove_from_trolley: { success: boolean };
-  clear_trolley: { cleared: boolean };
+  add_to_cart: { quantity: number };
+  set_cart_quantity: { quantity: number };
+  get_cart: { items: TrolleyItem[] };
+  remove_from_cart: { success: boolean };
+  clear_cart: { cleared: boolean };
   review_order: {
     items: TrolleyItem[];
     total?: string;

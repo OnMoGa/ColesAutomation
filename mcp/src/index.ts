@@ -269,18 +269,18 @@ server.registerTool(
   },
 );
 
-server.registerTool(
-  "coles_search_products",
-  {
-    description: "Search for products by query string.",
-    inputSchema: z.object({
-      query: z.string().min(1),
-      limit: z.number().int().positive().optional(),
-      offset: z.number().int().min(0).optional(),
-    }),
-  },
-  async ({ query, limit, offset }) => toTextContent(await sendCommand("search_products", { query, limit, offset })),
-);
+// server.registerTool(
+//   "coles_search_products",
+//   {
+//     description: "Search for products by query string.",
+//     inputSchema: z.object({
+//       query: z.string().min(1),
+//       limit: z.number().int().positive().optional(),
+//       offset: z.number().int().min(0).optional(),
+//     }),
+//   },
+//   async ({ query, limit, offset }) => toTextContent(await sendCommand("search_products", { query, limit, offset })),
+// );
 
 server.registerTool(
   "coles_add_to_cart",
@@ -290,7 +290,12 @@ server.registerTool(
       productId: z.string().min(1),
     }),
   },
-  async ({ productId }) => toTextContent(await sendCommand("add_to_trolley", { productId })),
+  async ({ productId }) => {
+    const colesResponse = await sendCommand("add_to_cart", { productId });
+    return toTextContent({
+      newQuantity: colesResponse.quantity,
+    });
+  },
 );
 
 server.registerTool(
@@ -302,7 +307,12 @@ server.registerTool(
       quantity: z.number().int().min(0),
     }),
   },
-  async ({ productId, quantity }) => toTextContent(await sendCommand("set_trolley_quantity", { productId, quantity })),
+  async ({ productId, quantity }) => {
+    const colesResponse = await sendCommand("set_cart_quantity", { productId, quantity });
+    return toTextContent({
+      newQuantity: colesResponse.quantity,
+    });
+  },
 );
 
 server.registerTool(
@@ -311,7 +321,18 @@ server.registerTool(
     description: "Get the current shopping cart's contents.",
     inputSchema: z.object({}),
   },
-  async () => toTextContent(await sendCommand("get_trolley", {})),
+  async () => {
+    const colesResponse = await sendCommand("get_cart", {});
+    return toTextContent({
+      items: colesResponse.items.map((item) => ({
+        productId: item.productId,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        totalPrice: item.totalPrice,
+      })),
+    });
+  },
 );
 
 server.registerTool(
@@ -322,26 +343,47 @@ server.registerTool(
       productId: z.string().min(1),
     }),
   },
-  async ({ productId }) => toTextContent(await sendCommand("remove_from_trolley", { productId })),
+  async ({ productId }) => {
+    const colesResponse = await sendCommand("remove_from_cart", { productId });
+    return toTextContent({
+      success: colesResponse.success,
+    });
+  },
 );
 
-server.registerTool(
-  "coles_clear_cart",
-  {
-    description: "Remove all items from the shopping cart.",
-    inputSchema: z.object({}),
-  },
-  async () => toTextContent(await sendCommand("clear_trolley", {})),
-);
+// server.registerTool(
+//   "coles_clear_cart",
+//   {
+//     description: "Remove all items from the shopping cart.",
+//     inputSchema: z.object({}),
+//   },
+//   async () => {
+//     const colesResponse = await sendCommand("clear_trolley", {});
+//     return toTextContent({
+//       cleared: colesResponse.cleared,
+//     });
+//   },
+// );
 
-server.registerTool(
-  "coles_review_order",
-  {
-    description: "Return a summary of the shopping cart without placing an order.",
-    inputSchema: z.object({}),
-  },
-  async () => toTextContent(await sendCommand("review_order", {})),
-);
+// server.registerTool(
+//   "coles_review_order",
+//   {
+//     description: "Return a summary of the shopping cart without placing an order.",
+//     inputSchema: z.object({}),
+//   },
+//   async () => {
+//     const colesResponse = await sendCommand("review_order", {});
+//     return toTextContent({
+//       items: colesResponse.items.map((item) => ({
+//         productId: item.productId,
+//         name: item.name,
+//         quantity: item.quantity,
+//         price: item.price,
+//         totalPrice: item.totalPrice,
+//       })),
+//     });
+//   },
+// );
 
 server.registerTool(
   "coles_get_previous_orders",
@@ -389,7 +431,7 @@ server.registerTool(
     );
     var ordersWithResolvedItems = previousOrderDetails.map((order) => {
       return {
-        _id: order._id,
+        id: order._id,
         totalPrice: order.orderAttributes.orderTotalPrice,
         orderPlacementTime: order.orderPlacementTime,
         items: order.items?.map((item) => {

@@ -1,7 +1,8 @@
-import { navigateTo, sleep } from "../colesDom";
+import { COLES_ORIGIN, navigateTo, sleep } from "../colesDom";
 
-export const addProductToCart = async (productUrl: string) => {
-  await navigateTo(productUrl);
+export const addProductToCart = async (productId: string) => {
+  const url = new URL(`${COLES_ORIGIN}/product/${productId}`);
+  await navigateTo(url.toString());
 
   const buyContainer = document.querySelector<HTMLDivElement>('[data-testid="product-buy"]');
   if (!buyContainer) {
