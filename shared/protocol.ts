@@ -8,7 +8,6 @@ export type CommandName =
   | "get_cart"
   | "remove_from_cart"
   | "clear_cart"
-  | "review_order"
   | "get_previous_orders"
   | "get_order_details";
 
@@ -25,7 +24,6 @@ export type RequestParams = {
   get_cart: Record<string, never>;
   remove_from_cart: { productId: string };
   clear_cart: Record<string, never>;
-  review_order: Record<string, never>;
   get_previous_orders: Record<string, never>;
   get_order_details: { orderId: string };
 };
@@ -100,12 +98,6 @@ export type CommandResult = {
   get_cart: { items: TrolleyItem[] };
   remove_from_cart: { success: boolean };
   clear_cart: { cleared: boolean };
-  review_order: {
-    items: TrolleyItem[];
-    total?: string;
-    checkoutEnabled?: boolean;
-    warnings?: string[];
-  };
   get_previous_orders: { orders: PreviousOrderSummary[] };
   get_order_details: { orderDetails: OrderDetails; productInfo: ProductDetails[] };
 };

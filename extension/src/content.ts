@@ -98,9 +98,6 @@ const commandHandlers: {
   clear_cart: async () => {
     throw new Error("Not implemented.");
   },
-  review_order: async () => {
-    throw new Error("Not implemented.");
-  },
   get_previous_orders: async () => {
     return { orders: await getPreviousOrders() };
   },

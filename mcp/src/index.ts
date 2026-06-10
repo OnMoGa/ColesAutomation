@@ -365,26 +365,6 @@ server.registerTool(
 //   },
 // );
 
-// server.registerTool(
-//   "coles_review_order",
-//   {
-//     description: "Return a summary of the shopping cart without placing an order.",
-//     inputSchema: z.object({}),
-//   },
-//   async () => {
-//     const colesResponse = await sendCommand("review_order", {});
-//     return toTextContent({
-//       items: colesResponse.items.map((item) => ({
-//         productId: item.productId,
-//         name: item.name,
-//         quantity: item.quantity,
-//         price: item.price,
-//         totalPrice: item.totalPrice,
-//       })),
-//     });
-//   },
-// );
-
 server.registerTool(
   "coles_get_previous_orders",
   {
