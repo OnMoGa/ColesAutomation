@@ -10,6 +10,12 @@ export interface Product {
   description: string;
   size: string;
   unitPrice: number;
+  categories?: ProductCategory[];
+}
+
+export interface ProductCategory {
+  categoryId: string;
+  subcategoryIds: string[];
 }
 
 export const upsertProductInfo = async (productDetails: Product[]) => {

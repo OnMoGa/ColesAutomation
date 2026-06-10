@@ -1,6 +1,6 @@
 export type CommandName =
   | "list_categories"
-  | "list_subcategories"
+  // | "list_subcategories"
   | "list_subcategory_products"
   | "search_products"
   | "add_to_trolley"
@@ -14,10 +14,9 @@ export type CommandName =
 
 export type RequestParams = {
   list_categories: Record<string, never>;
-  list_subcategories: { categoryName: string };
+  // list_subcategories: { categoryUrl: string };
   list_subcategory_products: {
-    categoryName: string;
-    subCategoryName: string;
+    subCategoryUrl: string;
     limit?: number;
     offset?: number;
   };
@@ -75,10 +74,18 @@ export type ProductDetails = {
   unitPrice: number;
 };
 
+export type Category = {
+  id: string;
+  name: string;
+  url: string;
+  productCount: number;
+  subcategories?: Category[];
+};
+
 export type CommandResult = {
   open_home: { url: string };
-  list_categories: { categories: string[] };
-  list_subcategories: { subcategories: string[] };
+  list_categories: { categories: Category[] };
+  // list_subcategories: { subcategories: Subcategory[] };
   list_subcategory_products: {
     products: Product[];
   };
@@ -114,4 +121,15 @@ export type ClientResponse<K extends CommandName = CommandName> = {
   ok: boolean;
   result?: CommandResult[K];
   error?: ResponseError;
+};
+
+/** Keeps-alive between extension and MCP; not part of command RPC. */
+export type TransportPingMessage = {
+  type: "ping";
+  id: string;
+};
+
+export type TransportPongMessage = {
+  type: "pong";
+  id: string;
 };

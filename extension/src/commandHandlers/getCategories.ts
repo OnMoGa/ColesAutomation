@@ -1,25 +1,74 @@
 import { COLES_ORIGIN, navigateTo } from "../colesDom";
+import { FetchInterceptedMessage } from "../injected/fetchHook";
+import { getNextData, NextRequestData } from "../nextData";
+import { waitForFetchMessage } from "../waitForFetchMessage";
 import { Subcategory } from "./getSubcategories";
 
 export interface Category {
+  id: string;
   name: string;
   url: string;
-  subcategories?: Subcategory[];
+  productCount: number;
+  subcategories?: Category[];
 }
 
-let categoriesCache: Category[] | undefined = undefined;
+export interface CategoriesPageProps {
+  allProductCategories: {
+    catalogGroupView: {
+      id: string;
+      name: string;
+      productCount: number;
+      seoToken: string;
+      catalogGroupView: {
+        id: string;
+        name: string;
+        productCount: number;
+        seoToken: string;
+        catalogGroupView: {
+          id: string;
+          name: string;
+          productCount: number;
+          seoToken: string;
+        }[];
+      }[];
+    }[];
+  };
+}
+
 export const getCategories = async (): Promise<Category[]> => {
-  if (!categoriesCache) {
-    await navigateTo(`${COLES_ORIGIN}/browse`);
-    const links = findNavCategories();
-    categoriesCache = links.map((link) => {
-      return {
-        name: link.textContent ?? "",
-        url: link.href,
-      };
-    });
-  }
-  return categoriesCache;
+  var waitForMessageTask = waitForFetchMessage(isMessageForCategoryData());
+  await navigateTo(`${COLES_ORIGIN}/browse`);
+  var nextData = (await waitForMessageTask) as NextRequestData<CategoriesPageProps>;
+  const categories = nextData.pageProps.allProductCategories.catalogGroupView.map((category) => {
+    return {
+      id: category.id,
+      name: category.name,
+      url: `${COLES_ORIGIN}/browse/${category.seoToken}`,
+      productCount: category.productCount,
+      subcategories: category.catalogGroupView.map((subcategory) => {
+        return {
+          id: subcategory.id,
+          name: subcategory.name,
+          url: `${COLES_ORIGIN}/browse/${category.seoToken}/${subcategory.seoToken}`,
+          productCount: subcategory.productCount,
+          subcategories: subcategory.catalogGroupView.map((aisle) => {
+            return {
+              id: aisle.id,
+              name: aisle.name,
+              url: `${COLES_ORIGIN}/browse/${category.seoToken}/${subcategory.seoToken}/${aisle.seoToken}`,
+              productCount: aisle.productCount,
+            };
+          }),
+        };
+      }),
+    };
+  });
+
+  return categories;
+};
+
+const isMessageForCategoryData = (): ((message: FetchInterceptedMessage) => boolean) => {
+  return (message: FetchInterceptedMessage) => message.url.match(`browse.json`) !== null && message.method === "GET";
 };
 
 const findNavCategories = (): HTMLAnchorElement[] => {

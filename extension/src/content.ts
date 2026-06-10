@@ -78,13 +78,13 @@ const commandHandlers: {
   [K in CommandName]: (params: RequestParams[K]) => Promise<CommandResult[K]>;
 } = {
   list_categories: async () => ({
-    categories: (await getCategories()).map((category) => category.name),
+    categories: await getCategories(),
   }),
-  list_subcategories: async (p) => ({
-    subcategories: (await getSubcategories(p.categoryName)).map((subcategory) => subcategory.name),
-  }),
+  // list_subcategories: async (p) => ({
+  //   subcategories: await getSubcategories(p.categoryUrl),
+  // }),
   list_subcategory_products: async (p) => ({
-    products: await getSubcategoryProducts(p.categoryName, p.subCategoryName),
+    products: await getSubcategoryProducts(p.subCategoryUrl),
   }),
   search_products: async (p) => {
     throw new Error("Not implemented.");

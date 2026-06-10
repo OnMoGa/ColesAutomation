@@ -2,12 +2,19 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { randomUUID } from "crypto";
 import type { IncomingMessage } from "http";
-import { MongoClient } from "mongodb";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { z } from "zod";
-import { ClientRequest, ClientResponse, CommandName, CommandResult, RequestParams } from "../../shared/protocol.js";
+import {
+  ClientRequest,
+  ClientResponse,
+  CommandName,
+  CommandResult,
+  RequestParams,
+  TransportPingMessage,
+} from "../../shared/protocol.js";
 import { getAllPreviousOrdersDetails, upsertOrderItems, upsertPreviousOrderSummaries } from "./mongo/previousOrders.js";
 import { getProductInfo, Product, upsertProductInfo } from "./mongo/products.js";
+import { getAllCategories, getCategoryById, upsertCategories } from "./mongo/categories.js";
 
 const WS_PORT = Number(process.env.COLES_WS_PORT ?? 7357);
 const WS_TOKEN = process.env.COLES_WS_TOKEN ?? "coles-dev-token";
@@ -43,7 +50,22 @@ wss.on("connection", (socket: WebSocket, request: IncomingMessage) => {
 
   socket.on("message", (data: RawData) => {
     try {
-      const message = JSON.parse(data.toString()) as ClientResponse;
+      const parsed = JSON.parse(data.toString()) as unknown;
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        (parsed as TransportPingMessage).type === "ping" &&
+        typeof (parsed as TransportPingMessage).id === "string"
+      ) {
+        socket.send(
+          JSON.stringify({
+            type: "pong",
+            id: (parsed as TransportPingMessage).id,
+          }),
+        );
+        return;
+      }
+      const message = parsed as ClientResponse;
       if (message.type !== "response" || !message.id) {
         return;
       }
@@ -116,7 +138,32 @@ server.registerTool(
     description: "List top-level product categories.",
     inputSchema: z.object({}),
   },
-  async () => toTextContent(await sendCommand("list_categories", {})),
+  async () => {
+    let categories = await getAllCategories();
+    if (categories.length === 0) {
+      const colesResponse = await sendCommand("list_categories", {});
+      categories = colesResponse.categories.map((category) => ({
+        _id: category.id,
+        name: category.name,
+        url: category.url,
+        productCount: category.productCount,
+        subcategories: category.subcategories?.map((subcategory) => ({
+          _id: subcategory.id,
+          name: subcategory.name,
+          url: subcategory.url,
+          productCount: subcategory.productCount,
+          subcategories: subcategory.subcategories?.map((aisle) => ({
+            _id: aisle.id,
+            name: aisle.name,
+            url: aisle.url,
+            productCount: aisle.productCount,
+          })),
+        })),
+      }));
+      await upsertCategories(categories);
+    }
+    return toTextContent(categories);
+  },
 );
 
 server.registerTool(
@@ -124,32 +171,58 @@ server.registerTool(
   {
     description: "List subcategories under a top-level category.",
     inputSchema: z.object({
-      categoryName: z.string().min(1),
+      categoryId: z.string().min(1).describe("The ID of the category to list subcategories for."),
     }),
   },
-  async ({ categoryName }) => toTextContent(await sendCommand("list_subcategories", { categoryName })),
+  async ({ categoryId }) => {
+    const category = await getCategoryById(categoryId);
+    if (!category) {
+      throw new Error(`Category not found: ${categoryId}`);
+    }
+    let subcategories = category.subcategories;
+    // if (!subcategories || subcategories.length === 0) {
+    //   const colesResponse = await sendCommand("list_subcategories", { categoryUrl: category.url });
+    //   subcategories = colesResponse.subcategories.map((s) => ({
+    //     _id: s.url.substring(s.url.lastIndexOf("/") + 1),
+    //     name: s.name,
+    //     url: s.url,
+    //   }));
+    //   await upsertSubcategoriesForCategory(categoryId, subcategories);
+    // }
+    return toTextContent(subcategories);
+  },
 );
 
 server.registerTool(
   "coles_list_subcategory_products",
   {
-    description: "List products for a specific subcategory.",
+    description:
+      "List products for a specific subcategory. This will provide the products' names, brands, descriptions, and importantly their id.",
     inputSchema: z.object({
-      categoryName: z.string().min(1),
-      subCategoryName: z.string().min(1),
+      categoryId: z.string().min(1).describe("The ID of the category to list products for."),
+      subCategoryId: z.string().min(1).describe("The ID of the subcategory to list products for."),
       limit: z.number().int().positive().optional(),
       offset: z.number().int().min(0).optional(),
     }),
   },
-  async ({ categoryName, subCategoryName, limit, offset }) =>
-    toTextContent(
+  async ({ categoryId, subCategoryId, limit, offset }) => {
+    const category = await getCategoryById(categoryId);
+    if (!category) {
+      throw new Error(`Category not found: ${categoryId}`);
+    }
+    const subCategory = category.subcategories?.find((s) => s._id === subCategoryId);
+    if (!subCategory) {
+      throw new Error(`Subcategory not found: ${subCategoryId}`);
+    }
+
+    return toTextContent(
       await sendCommand("list_subcategory_products", {
-        categoryName,
-        subCategoryName,
+        subCategoryUrl: subCategory.url,
         limit,
         offset,
       }),
-    ),
+    );
+  },
 );
 
 server.registerTool(
@@ -166,9 +239,9 @@ server.registerTool(
 );
 
 server.registerTool(
-  "coles_add_to_trolley",
+  "coles_add_to_cart",
   {
-    description: "Add a product to the trolley by productId.",
+    description: "Add a product to the shopping cart by productId.",
     inputSchema: z.object({
       productId: z.string().min(1),
     }),
@@ -177,9 +250,9 @@ server.registerTool(
 );
 
 server.registerTool(
-  "coles_set_trolley_quantity",
+  "coles_set_cart_quantity",
   {
-    description: "Set the quantity of a product in the trolley by its productId.",
+    description: "Set the quantity of a product in the shopping cart by its productId.",
     inputSchema: z.object({
       productId: z.string().min(1),
       quantity: z.number().int().min(0),
@@ -189,18 +262,18 @@ server.registerTool(
 );
 
 server.registerTool(
-  "coles_get_trolley",
+  "coles_get_cart_contents",
   {
-    description: "Get the current trolley contents.",
+    description: "Get the current shopping cart's contents.",
     inputSchema: z.object({}),
   },
   async () => toTextContent(await sendCommand("get_trolley", {})),
 );
 
 server.registerTool(
-  "coles_remove_from_trolley",
+  "coles_remove_from_cart",
   {
-    description: "Remove a product from the trolley.",
+    description: "Remove a product from the shopping cart.",
     inputSchema: z.object({
       productId: z.string().min(1),
     }),
@@ -209,9 +282,9 @@ server.registerTool(
 );
 
 server.registerTool(
-  "coles_clear_trolley",
+  "coles_clear_cart",
   {
-    description: "Remove all items from the trolley.",
+    description: "Remove all items from the shopping cart.",
     inputSchema: z.object({}),
   },
   async () => toTextContent(await sendCommand("clear_trolley", {})),
@@ -220,7 +293,7 @@ server.registerTool(
 server.registerTool(
   "coles_review_order",
   {
-    description: "Return a summary of the trolley without placing an order.",
+    description: "Return a summary of the shopping cart without placing an order.",
     inputSchema: z.object({}),
   },
   async () => toTextContent(await sendCommand("review_order", {})),
@@ -229,7 +302,7 @@ server.registerTool(
 server.registerTool(
   "coles_get_previous_orders",
   {
-    description: "Return a list of previous orders.",
+    description: "Return a list of previous orders, including details of the items in the orders.",
     inputSchema: z.object({}),
   },
   async () => {
@@ -292,6 +365,8 @@ server.registerTool(
     return toTextContent(ordersWithResolvedItems);
   },
 );
+
+//Add a shopping list tool that the llm can refer to
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

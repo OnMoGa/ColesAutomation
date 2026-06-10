@@ -10,11 +10,11 @@ export const listenForForegroundMessages = () => {
       return;
     }
 
-    if (request?.command === "save_previous_order") {
-      const previousOrder = request?.params?.previousOrder as PreviousOrderDetails;
-      sendResponse({ ok: true });
-      return;
-    }
+    // if (request?.command === "save_previous_order") {
+    //   const previousOrder = request?.params?.previousOrder as PreviousOrderDetails;
+    //   sendResponse({ ok: true });
+    //   return;
+    // }
 
     sendResponse({ ok: false, error: "Unknown command." });
   });

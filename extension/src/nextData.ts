@@ -1,12 +1,12 @@
-export interface NextRequestData<T> {
-  pageProps: T;
+export interface NextRequestData<TPageProps> {
+  pageProps: TPageProps;
 }
-export interface NextData<T> {
+export interface NextData<TPageProps> {
   props: {
-    pageProps: T;
+    pageProps: TPageProps;
   };
 }
-export const getNextData = <T>(): NextData<T> => {
+export const getNextData = <TPageProps>(): NextData<TPageProps> => {
   var nextDataScript = document.getElementById("__NEXT_DATA__");
   if (!nextDataScript) {
     throw new Error("Next data script not found");

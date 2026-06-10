@@ -1,4 +1,3 @@
-import { updateOrderDetailsCache } from "../caches/orderCache";
 import { CurrentOrderDetails } from "../colesTypes";
 import { FetchInterceptedMessage } from "../injected/fetchHook";
 
@@ -8,5 +7,5 @@ export const isMessageForCurrentOrderDetails = (message: FetchInterceptedMessage
 
 export const handleMessageForCurrentOrderDetails = (message: FetchInterceptedMessage) => {
   const order = message.responseJson as CurrentOrderDetails;
-  updateOrderDetailsCache(order);
+  // updateOrderDetailsCache(order);
 };
