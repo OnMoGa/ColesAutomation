@@ -5,7 +5,7 @@ import { getCategories } from "./commandHandlers/getCategories";
 import { getOrderDetails } from "./commandHandlers/getOrderDetails";
 import { getPreviousOrders } from "./commandHandlers/getPreviousOrders";
 import { getSubcategories } from "./commandHandlers/getSubcategories";
-import { getSubcategoryProducts } from "./commandHandlers/getSubcategoryProducts";
+import { getCategoryProducts } from "./commandHandlers/getCategoryProducts";
 import { removeProductFromCart } from "./commandHandlers/removeProductFromCart";
 import { setCartQuantity } from "./commandHandlers/setCartQuantity";
 import { FetchInterceptedMessage } from "./injected/fetchHook";
@@ -83,9 +83,7 @@ const commandHandlers: {
   // list_subcategories: async (p) => ({
   //   subcategories: await getSubcategories(p.categoryUrl),
   // }),
-  list_subcategory_products: async (p) => ({
-    products: await getSubcategoryProducts(p.subCategoryUrl),
-  }),
+  list_category_products: async (p) => await getCategoryProducts(p.categoryUrl, p.page ?? 0),
   search_products: async (p) => {
     throw new Error("Not implemented.");
   },

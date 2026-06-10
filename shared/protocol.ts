@@ -1,7 +1,7 @@
 export type CommandName =
   | "list_categories"
   // | "list_subcategories"
-  | "list_subcategory_products"
+  | "list_category_products"
   | "search_products"
   | "add_to_trolley"
   | "set_trolley_quantity"
@@ -15,10 +15,9 @@ export type CommandName =
 export type RequestParams = {
   list_categories: Record<string, never>;
   // list_subcategories: { categoryUrl: string };
-  list_subcategory_products: {
-    subCategoryUrl: string;
-    limit?: number;
-    offset?: number;
+  list_category_products: {
+    categoryUrl: string;
+    page?: number;
   };
   search_products: { query: string; limit?: number; offset?: number };
   add_to_trolley: { productId: string };
@@ -34,8 +33,12 @@ export type RequestParams = {
 export type Product = {
   id: string;
   name: string;
+  size: string;
+  brand: string;
+  description: string;
   price: number;
   productUrl: string;
+  categoryIds: string[];
 };
 
 export type TrolleyItem = {
@@ -86,8 +89,10 @@ export type CommandResult = {
   open_home: { url: string };
   list_categories: { categories: Category[] };
   // list_subcategories: { subcategories: Subcategory[] };
-  list_subcategory_products: {
+  list_category_products: {
     products: Product[];
+    noOfResults: number;
+    pageSize: number;
   };
   search_products: { query: string; products: Product[]; total?: number };
   add_to_trolley: { quantity: number };

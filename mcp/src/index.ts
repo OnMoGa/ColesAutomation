@@ -13,7 +13,7 @@ import {
   TransportPingMessage,
 } from "../../shared/protocol.js";
 import { getAllPreviousOrdersDetails, upsertOrderItems, upsertPreviousOrderSummaries } from "./mongo/previousOrders.js";
-import { getProductInfo, Product, upsertProductInfo } from "./mongo/products.js";
+import { getProductInfo, getProductsByCategoryId, Product, upsertProductInfo } from "./mongo/products.js";
 import { getAllCategories, getCategoryById, upsertCategories } from "./mongo/categories.js";
 
 const WS_PORT = Number(process.env.COLES_WS_PORT ?? 7357);
@@ -162,16 +162,57 @@ server.registerTool(
       }));
       await upsertCategories(categories);
     }
-    return toTextContent(categories);
+    return toTextContent(
+      categories.map((category) => ({
+        name: category.name,
+        subcategories: category.subcategories?.map((subcategory) => ({
+          name: subcategory.name,
+          subcategories: subcategory.subcategories?.map((aisle) => ({
+            id: aisle._id,
+            name: aisle.name,
+          })),
+        })),
+      })),
+    );
   },
 );
 
+// server.registerTool(
+//   "coles_list_subcategories",
+//   {
+//     description: "List subcategories under a top-level category.",
+//     inputSchema: z.object({
+//       categoryId: z.string().min(1).describe("The ID of the category to list subcategories for."),
+//     }),
+//   },
+//   async ({ categoryId }) => {
+//     const category = await getCategoryById(categoryId);
+//     if (!category) {
+//       throw new Error(`Category not found: ${categoryId}`);
+//     }
+//     let subcategories = category.subcategories;
+//     // if (!subcategories || subcategories.length === 0) {
+//     //   const colesResponse = await sendCommand("list_subcategories", { categoryUrl: category.url });
+//     //   subcategories = colesResponse.subcategories.map((s) => ({
+//     //     _id: s.url.substring(s.url.lastIndexOf("/") + 1),
+//     //     name: s.name,
+//     //     url: s.url,
+//     //   }));
+//     //   await upsertSubcategoriesForCategory(categoryId, subcategories);
+//     // }
+//     return toTextContent(subcategories);
+//   },
+// );
+
 server.registerTool(
-  "coles_list_subcategories",
+  "coles_list_category_products",
   {
-    description: "List subcategories under a top-level category.",
+    description:
+      "List products for a specific category. This will provide the products' names, brands, descriptions, and importantly their id.",
     inputSchema: z.object({
-      categoryId: z.string().min(1).describe("The ID of the category to list subcategories for."),
+      categoryId: z.string().min(1).describe("The numerical ID of the category to list products for."),
+      // limit: z.number().int().positive().optional(),
+      // offset: z.number().int().min(0).optional(),
     }),
   },
   async ({ categoryId }) => {
@@ -179,48 +220,51 @@ server.registerTool(
     if (!category) {
       throw new Error(`Category not found: ${categoryId}`);
     }
-    let subcategories = category.subcategories;
-    // if (!subcategories || subcategories.length === 0) {
-    //   const colesResponse = await sendCommand("list_subcategories", { categoryUrl: category.url });
-    //   subcategories = colesResponse.subcategories.map((s) => ({
-    //     _id: s.url.substring(s.url.lastIndexOf("/") + 1),
-    //     name: s.name,
-    //     url: s.url,
-    //   }));
-    //   await upsertSubcategoriesForCategory(categoryId, subcategories);
-    // }
-    return toTextContent(subcategories);
-  },
-);
 
-server.registerTool(
-  "coles_list_subcategory_products",
-  {
-    description:
-      "List products for a specific subcategory. This will provide the products' names, brands, descriptions, and importantly their id.",
-    inputSchema: z.object({
-      categoryId: z.string().min(1).describe("The ID of the category to list products for."),
-      subCategoryId: z.string().min(1).describe("The ID of the subcategory to list products for."),
-      limit: z.number().int().positive().optional(),
-      offset: z.number().int().min(0).optional(),
-    }),
-  },
-  async ({ categoryId, subCategoryId, limit, offset }) => {
-    const category = await getCategoryById(categoryId);
-    if (!category) {
-      throw new Error(`Category not found: ${categoryId}`);
-    }
-    const subCategory = category.subcategories?.find((s) => s._id === subCategoryId);
-    if (!subCategory) {
-      throw new Error(`Subcategory not found: ${subCategoryId}`);
+    var products = await getProductsByCategoryId(categoryId);
+    var page = 1;
+    var totalProducts = category.productCount ?? 0;
+
+    while (products.length < totalProducts * 0.9) {
+      const colesResponse = await sendCommand("list_category_products", {
+        categoryUrl: category.url,
+        page: page,
+      });
+
+      totalProducts = colesResponse.noOfResults;
+
+      const fetchedProducts = colesResponse.products.map((p) => ({
+        _id: p.id,
+        name: p.name,
+        size: p.size,
+        brand: p.brand,
+        description: p.description,
+        unitPrice: p.price,
+        categoryIds: p.categoryIds,
+        productUrl: p.productUrl,
+      }));
+
+      await upsertProductInfo(fetchedProducts);
+
+      const newProducts = fetchedProducts.filter((p) => !products.some((p2) => p2._id === p._id));
+      products = [...products, ...newProducts];
+
+      const totalPages = Math.ceil(colesResponse.noOfResults / colesResponse.pageSize);
+      if (page >= totalPages) {
+        break;
+      }
+      page += 1;
     }
 
     return toTextContent(
-      await sendCommand("list_subcategory_products", {
-        subCategoryUrl: subCategory.url,
-        limit,
-        offset,
-      }),
+      products.map((product) => ({
+        id: product._id,
+        name: product.name,
+        size: product.size,
+        brand: product.brand,
+        description: product.description,
+        unitPrice: product.unitPrice,
+      })),
     );
   },
 );

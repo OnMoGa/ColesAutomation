@@ -10,12 +10,8 @@ export interface Product {
   description: string;
   size: string;
   unitPrice: number;
-  categories?: ProductCategory[];
-}
-
-export interface ProductCategory {
-  categoryId: string;
-  subcategoryIds: string[];
+  productUrl?: string;
+  categoryIds?: string[];
 }
 
 export const upsertProductInfo = async (productDetails: Product[]) => {
@@ -38,5 +34,13 @@ export const getProductInfo = async (productIds: string[]) => {
   return await db
     .collection<Product>(PRODUCTS_COLLECTION)
     .find({ _id: { $in: productIds } })
+    .toArray();
+};
+
+export const getProductsByCategoryId = async (categoryId: string): Promise<Product[]> => {
+  const db = await getMongoDb();
+  return await db
+    .collection<Product>(PRODUCTS_COLLECTION)
+    .find({ categoryIds: { $in: [categoryId] } })
     .toArray();
 };

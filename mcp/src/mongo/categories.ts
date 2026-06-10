@@ -7,6 +7,7 @@ export interface Category {
   name: string;
   url: string;
   subcategories?: Category[];
+  productCount?: number;
 }
 
 export const upsertCategories = async (categories: Category[]) => {
@@ -31,15 +32,34 @@ export const getAllCategories = async () => {
 
 export const getCategoryById = async (categoryId: string): Promise<Category | undefined> => {
   const db = await getMongoDb();
-  return (await db.collection<Category>(CATEGORIES_COLLECTION).findOne({ _id: categoryId })) ?? undefined;
+  const topLevelCategory = await db.collection<Category>(CATEGORIES_COLLECTION).findOne({
+    $or: [{ _id: categoryId }, { "subcategories._id": categoryId }, { "subcategories.subcategories._id": categoryId }],
+  });
+
+  if (!topLevelCategory) {
+    return undefined;
+  }
+  if (topLevelCategory._id === categoryId) {
+    return topLevelCategory;
+  }
+  const subCategory = topLevelCategory.subcategories?.find(
+    (s) => s._id === categoryId || s.subcategories?.find((a) => a._id === categoryId),
+  );
+  if (!subCategory) {
+    throw new Error("Impossible. Query must be wrong");
+  }
+  if (subCategory._id === categoryId) {
+    return subCategory;
+  }
+  const aisle = subCategory.subcategories?.find((a) => a._id === categoryId);
+  if (aisle) {
+    return aisle;
+  }
+  return undefined;
 };
 
 export const getSubcategoriesByCategoryId = async (categoryId: string): Promise<Category[] | undefined> => {
-  const db = await getMongoDb();
-  return await db
-    .collection<Category>(CATEGORIES_COLLECTION)
-    .findOne({ _id: categoryId })
-    .then((result) => result?.subcategories);
+  return (await getCategoryById(categoryId))?.subcategories;
 };
 
 export const upsertSubcategoriesForCategory = async (categoryId: string, subcategories: Category[]) => {
