@@ -9,7 +9,8 @@ export type CommandName =
   | "remove_from_cart"
   | "clear_cart"
   | "get_previous_orders"
-  | "get_order_details";
+  | "get_order_details"
+  | "get_product_info";
 
 export type RequestParams = {
   list_categories: Record<string, never>;
@@ -26,6 +27,7 @@ export type RequestParams = {
   clear_cart: Record<string, never>;
   get_previous_orders: Record<string, never>;
   get_order_details: { orderId: string };
+  get_product_info: { productId: string };
 };
 
 export type Product = {
@@ -83,6 +85,18 @@ export type Category = {
   subcategories?: Category[];
 };
 
+export type ProductPageDetails = {
+  productId: string;
+  name: string;
+  brand: string;
+  description: string;
+  longDescription: string;
+  size: string;
+  unitPrice: number | undefined; //undefined if the product is not available
+  productUrl: string;
+  categoryIds: string[];
+};
+
 export type CommandResult = {
   open_home: { url: string };
   list_categories: { categories: Category[] };
@@ -100,6 +114,7 @@ export type CommandResult = {
   clear_cart: { cleared: boolean };
   get_previous_orders: { orders: PreviousOrderSummary[] };
   get_order_details: { orderDetails: OrderDetails; productInfo: ProductDetails[] };
+  get_product_info: { product: ProductPageDetails };
 };
 
 export type ClientRequest<K extends CommandName = CommandName> = {

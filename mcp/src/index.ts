@@ -164,51 +164,49 @@ server.registerTool(
     }
     return toTextContent(
       categories.map((category) => ({
+        id: category._id,
         name: category.name,
-        subcategories: category.subcategories?.map((subcategory) => ({
-          name: subcategory.name,
-          subcategories: subcategory.subcategories?.map((aisle) => ({
-            id: aisle._id,
-            name: aisle.name,
-          })),
-        })),
+        // subcategories: category.subcategories?.map((subcategory) => ({
+        //   name: subcategory.name,
+        //   subcategories: subcategory.subcategories?.map((aisle) => ({
+        //     id: aisle._id,
+        //     name: aisle.name,
+        //   })),
+        // })),
       })),
     );
   },
 );
 
-// server.registerTool(
-//   "coles_list_subcategories",
-//   {
-//     description: "List subcategories under a top-level category.",
-//     inputSchema: z.object({
-//       categoryId: z.string().min(1).describe("The ID of the category to list subcategories for."),
-//     }),
-//   },
-//   async ({ categoryId }) => {
-//     const category = await getCategoryById(categoryId);
-//     if (!category) {
-//       throw new Error(`Category not found: ${categoryId}`);
-//     }
-//     let subcategories = category.subcategories;
-//     // if (!subcategories || subcategories.length === 0) {
-//     //   const colesResponse = await sendCommand("list_subcategories", { categoryUrl: category.url });
-//     //   subcategories = colesResponse.subcategories.map((s) => ({
-//     //     _id: s.url.substring(s.url.lastIndexOf("/") + 1),
-//     //     name: s.name,
-//     //     url: s.url,
-//     //   }));
-//     //   await upsertSubcategoriesForCategory(categoryId, subcategories);
-//     // }
-//     return toTextContent(subcategories);
-//   },
-// );
+server.registerTool(
+  "coles_list_subcategories",
+  {
+    description: "List subcategories under a top-level category or subcategory.",
+    inputSchema: z.object({
+      categoryId: z.string().min(1).describe("The ID of the category or subcategory to list subcategories for."),
+    }),
+  },
+  async ({ categoryId }) => {
+    const category = await getCategoryById(categoryId);
+    if (!category) {
+      throw new Error(`Category not found: ${categoryId}`);
+    }
+    let subcategories = category.subcategories;
+
+    return toTextContent(
+      subcategories?.map((subcategory) => ({
+        id: subcategory._id,
+        name: subcategory.name,
+      })),
+    );
+  },
+);
 
 server.registerTool(
   "coles_list_category_products",
   {
     description:
-      "List products for a specific category. This will provide the products' names, brands, descriptions, and importantly their id.",
+      "List products for a specific category or subcategory. This will provide the products' names, brands, descriptions, and importantly their id.",
     inputSchema: z.object({
       categoryId: z.string().min(1).describe("The numerical ID of the category to list products for."),
       // limit: z.number().int().positive().optional(),
@@ -405,6 +403,24 @@ server.registerTool(
     }
 
     var productIds = previousOrderDetails.flatMap((order) => order.items?.map((item) => item.productId) ?? []);
+    var products = await getProductInfo(productIds);
+    var missingProductIds = productIds.filter((id) => !products.some((p) => p._id === id));
+    for (const id of missingProductIds) {
+      var colesResponse = await sendCommand("get_product_info", { productId: id });
+      var newProduct: Product = {
+        _id: colesResponse.product.productId,
+        name: colesResponse.product.name,
+        brand: colesResponse.product.brand,
+        description: colesResponse.product.description,
+        longDescription: colesResponse.product.longDescription,
+        size: colesResponse.product.size,
+        unitPrice: colesResponse.product.unitPrice,
+        productUrl: colesResponse.product.productUrl,
+        categoryIds: colesResponse.product.categoryIds,
+      };
+      await upsertProductInfo([newProduct]);
+      products = [...products, newProduct];
+    }
 
     var productInfoMap = new Map<string, Product>(
       (await getProductInfo(productIds)).map((product) => [product._id, product]),
@@ -415,13 +431,13 @@ server.registerTool(
         totalPrice: order.orderAttributes.orderTotalPrice,
         orderPlacementTime: order.orderPlacementTime,
         items: order.items?.map((item) => {
-          var product = productInfoMap.get(item.productId);
+          var product = productInfoMap.get(item.productId)!;
           return {
-            name: product?.name,
-            brand: product?.brand,
-            description: product?.description,
-            size: product?.size,
-            unitPrice: product?.unitPrice,
+            name: product.name,
+            brand: product.brand,
+            description: product.description,
+            size: product.size,
+            unitPrice: product.unitPrice,
             quantity: item.quantity,
           };
         }),
@@ -432,6 +448,7 @@ server.registerTool(
   },
 );
 
+//Add checklist tool so it can check off each step at it completes it
 //Add a shopping list tool that the llm can refer to
 
 const transport = new StdioServerTransport();

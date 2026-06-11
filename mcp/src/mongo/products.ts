@@ -8,8 +8,9 @@ export interface Product {
   name: string;
   brand: string;
   description: string;
+  longDescription?: string;
   size: string;
-  unitPrice: number;
+  unitPrice?: number;
   productUrl?: string;
   categoryIds?: string[];
 }
@@ -18,10 +19,11 @@ export const upsertProductInfo = async (productDetails: Product[]) => {
   const db = await getMongoDb();
 
   const updates = productDetails.map((product) => {
+    const cleaned = Object.fromEntries(Object.entries(product).filter(([_, v]) => v != null && v != undefined));
     return {
       updateOne: {
         filter: { _id: product._id },
-        update: { $set: product },
+        update: { $set: cleaned },
         upsert: true,
       },
     };

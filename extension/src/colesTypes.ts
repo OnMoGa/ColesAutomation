@@ -1,3 +1,24 @@
+//used for the dedicated product page
+export interface FullProduct {
+  id: number;
+  name: string;
+  brand: string;
+  description: string;
+  longDescription: string;
+  size: string;
+  onlineHeirs: OnlineHeir[];
+  pricing: Pricing | null;
+}
+
+export interface OnlineHeir {
+  aisle: string;
+  category: string;
+  subCategory: string;
+  categoryId: string;
+  aisleId: string;
+  subCategoryId: string;
+}
+
 export interface CurrentOrderDetails {
   orderId: string;
   orderModifiedFlag: boolean;
@@ -48,15 +69,6 @@ export interface MerchandiseHeir {
   category: string;
   subCategory: string;
   className: string;
-}
-
-export interface OnlineHeir {
-  aisle: string;
-  category: string;
-  subCategory: string;
-  categoryId: string;
-  aisleId: string;
-  subCategoryId: string;
 }
 
 export interface Pricing {

@@ -18,6 +18,7 @@ import {
   isMessageForPreviousOrderDetails,
 } from "./interceptedMessageHandlers/previousOrderDetails";
 import { injectPageScript } from "./scriptInjector";
+import { getProductInfo } from "./commandHandlers/getProductInfo";
 
 type ContentWindow = Window & {
   __COLES_AUTOMATION_CONTENT_SCRIPT_LOADED__?: boolean;
@@ -119,6 +120,9 @@ const commandHandlers: {
         unitPrice: item.orderItem.unitPrice,
       })),
     };
+  },
+  get_product_info: async (p) => {
+    return { product: await getProductInfo(p.productId) };
   },
 };
 
